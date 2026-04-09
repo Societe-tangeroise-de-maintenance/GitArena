@@ -1,290 +1,436 @@
-# Dev Gamification Dashboard — Superprompt
+# GitArena — Superprompt (React / Vite)
 
-## What we're building
+## Project name & description
 
-A **passive TV dashboard** — always-on, no interaction, watched from across a room by the whole dev team. It connects live to a GitHub org via a PAT, polls for real activity, and displays a real-time gamified leaderboard with animations, rankings, streaks, badges, boss fights, and a live activity feed. The goal is to motivate the team, create friendly competition, and surface recognition moments automatically.
+**GitArena** — A live gamification dashboard that turns your GitHub org activity into a real-time leaderboard, streaks, badges, and boss fights displayed on a team TV screen.
 
 ---
 
-## Core requirements
+## What we're building
 
-- Single self-contained HTML file, no build step, runs in any browser
-- GitHub org PAT injected at the top of the file as a config variable
-- Polls GitHub REST API on a configurable interval (default: 60s)
-- WebSocket-ready architecture (can be upgraded later)
-- All animations must be CSS-only (no heavy JS animation libraries)
-- Must be readable at 1080p from 2–3 meters away (large fonts, high contrast)
-- Dark background (the screen is always on — OLED-friendly)
-- Auto-cycles spotlight panels every 30 seconds
-- No user interaction required — fully autonomous after page load
+A **passive TV dashboard** — always-on, no user interaction, watched from across a room. It connects live to a GitHub org via a PAT, polls for real activity, and displays a real-time gamified leaderboard with animations, rankings, streaks, badges, boss fights, and a live activity feed. The goal is to motivate the team, create friendly competition, and surface recognition moments automatically.
+
+---
+
+## Tech stack — React, NOT a single HTML file
+
+| Layer | Choice |
+|---|---|
+| Framework | React 18 + Vite |
+| Language | TypeScript |
+| Styling | Tailwind CSS v3 |
+| State | Zustand |
+| Animations | Framer Motion |
+| Charts | Recharts |
+| Fonts | Geist + Geist Mono via @fontsource |
+| Package manager | npm |
+
+**Do not use a single HTML file. Do not use vanilla JS. This is a proper React + Vite project.**
+
+---
+
+## Design aesthetic — Linear / Vercel / GitHub
+
+- Background: `#0a0a0a`
+- Panels: `#111111`, raised elements: `#1a1a1a`
+- Borders: `rgba(255,255,255,0.06)` — barely visible
+- Text: `#ededed` primary, `#888888` secondary, `#444444` tertiary
+- **Geist Mono for ALL numbers, XP, timestamps, stats, rank numbers, labels**
+- **Geist for names and prose only**
+- No gradients anywhere — flat surfaces only
+- No colored backgrounds on cards
+- Color only on: type indicator bars, avatars, semantic status
+- Borders are `1px`, never thicker
+- Border radius: `6px` components, `8px` modals
+- Designed for 1920x1080 at 2-3 meters: primary text min `14px`, names `16px`, stats `20-24px`, spotlight values `48-56px`
+
+---
+
+## Project structure
+
+```
+gitarena/
+├── src/
+│   ├── main.tsx
+│   ├── App.tsx
+│   ├── config.ts
+│   ├── store/
+│   │   └── useStore.ts
+│   ├── hooks/
+│   │   ├── useGitHubPoller.ts
+│   │   └── useFullSync.ts
+│   ├── lib/
+│   │   ├── github.ts
+│   │   ├── xp.ts
+│   │   ├── badges.ts
+│   │   └── storage.ts
+│   ├── components/
+│   │   ├── layout/
+│   │   │   └── TopBar.tsx
+│   │   ├── leaderboard/
+│   │   │   ├── Leaderboard.tsx
+│   │   │   └── LeaderboardRow.tsx
+│   │   ├── feed/
+│   │   │   ├── ActivityFeed.tsx
+│   │   │   └── FeedItem.tsx
+│   │   ├── stats/
+│   │   │   ├── StatsPanel.tsx
+│   │   │   └── BeltPanel.tsx
+│   │   ├── spotlight/
+│   │   │   ├── Spotlight.tsx
+│   │   │   ├── SpotlightNav.tsx
+│   │   │   └── panels/
+│   │   │       ├── MVPPanel.tsx
+│   │   │       ├── DuelPanel.tsx
+│   │   │       ├── StreakWallPanel.tsx
+│   │   │       ├── BadgePanel.tsx
+│   │   │       ├── FunStatPanel.tsx
+│   │   │       ├── ShamePanel.tsx
+│   │   │       ├── VelocityPanel.tsx
+│   │   │       └── TrophyPanel.tsx
+│   │   └── overlays/
+│   │       ├── LevelUpOverlay.tsx
+│   │       ├── BossVictoryOverlay.tsx
+│   │       └── OvertakenPill.tsx
+│   └── types/
+│       └── index.ts
+├── index.html
+├── vite.config.ts
+├── tailwind.config.ts
+└── package.json
+```
+
+---
+
+## config.ts
+
+```typescript
+// src/config.ts
+// WARNING: Do not commit your PAT to git. Add config.ts to .gitignore.
+
+export const CONFIG = {
+  pat:              'ghp_YOUR_PAT_HERE',
+  org:              'your-org-name',
+  repos:            [] as string[],
+  pollInterval:     10,
+  fullSyncInterval: 300,
+  weeklyResetDay:   1,
+  bossGoals: [
+    { label: 'close 30 issues',  metric: 'issuesClosed' as const, target: 30  },
+    { label: 'merge 20 PRs',     metric: 'prsMerged'    as const, target: 20  },
+    { label: 'hit 200 commits',  metric: 'commits'      as const, target: 200 },
+  ],
+  spotlightInterval: 30,
+};
+```
+
+Add `src/config.ts` to `.gitignore`.
+
+---
+
+## types/index.ts
+
+```typescript
+export interface Member {
+  login: string;
+  name: string;
+  color: string;
+}
+
+export interface DevStats {
+  login: string;
+  weeklyXp: number;
+  totalXp: number;
+  weeklyCommits: number;
+  weeklyPRsOpened: number;
+  weeklyPRsMerged: number;
+  weeklyPRsReviewed: number;
+  weeklyIssuesClosed: number;
+  weeklyLinesAdded: number;
+  weeklyLinesDeleted: number;
+  dailyCommits: number;
+  dailyIssuesClosed: number;
+  streak: number;
+  longestStreak: number;
+  streakLastDate: string | null;
+  lastActivityTime: string | null;
+  lastCommitDate: string | null;
+  badges: string[];
+}
+
+export interface FeedItem {
+  id: string;
+  type: 'commit' | 'pr-opened' | 'pr-merged' | 'review' | 'issue' | 'badge' | 'streak' | 'level-up';
+  user: string;
+  repo: string;
+  message: string;
+  detail: string;
+  xp: number;
+  time: string;
+}
+
+export interface BadgeDef {
+  id: string;
+  name: string;
+  icon: string;
+  rarity: 'common' | 'rare' | 'legendary';
+  desc: string;
+}
+
+export interface BossGoal {
+  label: string;
+  metric: 'issuesClosed' | 'prsMerged' | 'commits';
+  target: number;
+}
+
+export interface Belts {
+  reviewer: string | null;
+  closer: string | null;
+  speedKing: string | null;
+}
+
+export interface ShamePR {
+  title: string;
+  repo: string;
+  author: string;
+  age: number;
+}
+```
+
+---
+
+## XP system — lib/xp.ts
+
+```typescript
+export const XP_VALUES = {
+  commit: 50, prOpened: 80, prMerged: 120,
+  prReviewed: 60, issueClosed: 40,
+  firstCommit: 30, netNegativePR: 70, streakBonus: 200,
+};
+
+export const LEVELS = [
+  { level: 1, xp: 0,     title: 'intern'    },
+  { level: 2, xp: 500,   title: 'junior'    },
+  { level: 3, xp: 1500,  title: 'dev'       },
+  { level: 4, xp: 3000,  title: 'senior'    },
+  { level: 5, xp: 6000,  title: 'staff'     },
+  { level: 6, xp: 10000, title: 'principal' },
+  { level: 7, xp: 16000, title: 'architect' },
+  { level: 8, xp: 25000, title: 'legendary' },
+];
+```
+
+---
+
+## Badges — lib/badges.ts
+
+```typescript
+export const BADGE_DEFS: BadgeDef[] = [
+  { id: 'earlyBird',    name: 'Early Bird',   icon: '🐦', rarity: 'common',    desc: 'first commit before 9am'         },
+  { id: 'nightOwl',     name: 'Night Owl',    icon: '🦉', rarity: 'common',    desc: 'commit after 11pm'               },
+  { id: 'quickDraw',    name: 'Quick Draw',   icon: '⚡', rarity: 'common',    desc: 'PR reviewed within 1h'           },
+  { id: 'closer',       name: 'Closer',       icon: '🎯', rarity: 'common',    desc: '5 issues in a day'              },
+  { id: 'surgeon',      name: 'The Surgeon',  icon: '🔪', rarity: 'rare',      desc: 'PR with >90% deletions'         },
+  { id: 'streakMaster', name: 'Streak Master',icon: '🔥', rarity: 'rare',      desc: '7-day commit streak'            },
+  { id: 'reviewerWeek', name: 'Top Reviewer', icon: '👁️', rarity: 'rare',      desc: 'most reviews this week'         },
+  { id: 'speedDemon',   name: 'Speed Demon',  icon: '💨', rarity: 'rare',      desc: 'PR merged within 2h'            },
+  { id: 'janitor',      name: 'The Janitor',  icon: '🧹', rarity: 'legendary', desc: 'delete more than add in a month'},
+  { id: 'ghostSlayer',  name: 'Ghost Slayer', icon: '⚔️', rarity: 'legendary', desc: '10+ issues in a week'           },
+  { id: 'ironDev',      name: 'Iron Dev',     icon: '🛡️', rarity: 'legendary', desc: '30-day commit streak'           },
+  { id: 'theWall',      name: 'The Wall',     icon: '🧱', rarity: 'legendary', desc: 'no PR unreviewed >4h all week'  },
+];
+```
 
 ---
 
 ## GitHub data to pull
 
-### Per developer (org members)
-| Metric | GitHub API endpoint |
-|---|---|
-| Commits this week | `/repos/{org}/{repo}/commits?author={user}&since=...` |
-| PRs opened | `/search/issues?q=author:{user}+type:pr+org:{org}` |
-| PRs merged | `/search/issues?q=author:{user}+type:pr+is:merged+org:{org}` |
-| PRs reviewed | `/search/issues?q=reviewed-by:{user}+type:pr+org:{org}` |
-| Issues closed | `/search/issues?q=assignee:{user}+type:issue+is:closed+org:{org}` |
-| Lines added/deleted | `/repos/{org}/{repo}/stats/contributors` |
-| Review comments left | `/repos/{org}/{repo}/pulls/comments` filtered by user |
+### Event stream (useGitHubPoller.ts — real-time)
+- `GET /orgs/{org}/events?per_page=100`
+- Use `ETag` + `If-None-Match` — 304 = no change, costs 0 rate limit
+- Respect `X-Poll-Interval` response header
+- Process: `PushEvent`, `PullRequestEvent`, `PullRequestReviewEvent`, `IssuesEvent`, `CreateEvent`
 
-### Org-wide
-| Metric | Use for |
-|---|---|
-| Recent commits across all repos | Live activity feed |
-| Open PRs with no review for >24h | "Hall of shame" / pressure mechanic |
-| Total issues closed this week | Boss fight progress |
-| Total commits today | Team mood indicator |
+### Full sync (useFullSync.ts — every 5 min)
+- PRs opened: `/search/issues?q=org:{org}+type:pr+created:>={date}`
+- PRs merged: `/search/issues?q=org:{org}+type:pr+is:merged+closed:>={date}`
+- Issues closed: `/search/issues?q=org:{org}+type:issue+is:closed+closed:>={date}`
+- Open PRs no review: `/search/issues?q=org:{org}+type:pr+is:open+review:none`
+- Reviews per member: `/search/issues?q=reviewed-by:{login}+type:pr+org:{org}+updated:>={date}`
+- Recent commits: `/orgs/{org}/events?per_page=100`
 
 ---
 
-## XP system
+## Screen layout — CSS Grid (1920×1080)
 
-### XP values per action
-| Action | XP |
-|---|---|
-| Commit pushed | +50 XP |
-| PR opened | +80 XP |
-| PR merged | +120 XP |
-| PR reviewed (approved or commented) | +60 XP |
-| Issue closed | +40 XP |
-| First commit of the day | +30 XP bonus |
-| Net-negative PR (more deletions than additions) | +70 XP bonus |
-| Commit streak milestone (3, 7, 14, 30 days) | +200 XP bonus |
+```
+grid-template-columns: 360px 1fr 300px
+grid-template-rows: 56px 1fr 220px
 
-### Levels
-| Level | XP threshold | Title |
+Row 1 (56px):  TopBar — full width
+Row 2 (1fr):   Leaderboard | Feed | Stats+Belts
+Row 3 (220px): Spotlight — full width (nav 160px + panel flex:1)
+```
+
+All separators: `1px solid rgba(255,255,255,0.06)`
+
+---
+
+## Leaderboard rows (68px each)
+
+- Rank: monospace, `#1` = white, `#2/#3` = `#888`, rest = `#444`
+- Avatar: 30px circle, colored bg, monospace initials, subtle breathe animation
+- Name (14px 500 weight) + level title (10px mono muted) + 1px progress bar
+- Streak: 10px mono, amber color — only shown if active
+- XP: 14px mono right-aligned + "xp" label 10px muted
+- Ghost: opacity 0.22 + grayscale if no activity 3+ days
+- On new XP: `+{n}` floats up and fades (Framer Motion)
+
+---
+
+## Activity feed items
+
+Each item (min 50px height):
+- 2px left bar: blue=commit, purple=pr-opened, green=pr-merged, teal=review, amber=issue, white=badge/level-up, red=streak
+- 26px avatar circle
+- Name (bold 13px) + action text / detail line (11px mono muted) / repo
+- XP (11px green) + timestamp (10px mono muted) — right side
+
+---
+
+## Spotlight — 8 panels, auto-rotates every 30s
+
+| Mode key | Nav label | Content |
 |---|---|---|
-| 1 | 0 | Intern |
-| 2 | 500 | Junior Dev |
-| 3 | 1,500 | Dev |
-| 4 | 3,000 | Senior Dev |
-| 5 | 6,000 | Staff Engineer |
-| 6 | 10,000 | Principal |
-| 7 | 16,000 | Architect |
-| 8 | 25,000 | Legendary |
+| mvp | mvp | Large avatar, name, level, 5 stats (commits, merged, reviews, issues, streak) |
+| duel | duel | #1 vs #2 split bar, XP counts, percentage |
+| streaks | streaks | Grid of active streaks — avatar + name + day count |
+| badge | badge | Large icon, badge name, rarity tag, earner name, description |
+| funStat | fun stat | 52px monospace number + 16px label |
+| shame | needs review | Cards with red top border — PR title, repo, author, hours waiting |
+| velocity | velocity | Recharts BarChart of commits per day this week |
+| trophies | trophies | Grid of earned badges — icon, name, owner |
 
-Level-up triggers a full-screen flash animation with the developer's name and new title.
+Left nav shows 8 dots, active one is a white pill. Inactive are dark circles.
 
 ---
 
-## Badges
+## Overlay animations (Framer Motion AnimatePresence)
 
-### Common
-| Badge | Condition |
+| Event | Overlay |
 |---|---|
-| Early Bird | First commit before 9am |
-| Night Owl | Commit after 11pm |
-| Quick Draw | PR reviewed within 1 hour of opening |
-| Closer | Close 5 issues in a single day |
-
-### Rare
-| Badge | Condition |
-|---|---|
-| The Surgeon | PR where deletions > 90% of changes |
-| Streak Master | 7-day commit streak |
-| Reviewer of the Week | Most PR reviews in a week |
-| Speed Demon | PR merged within 2 hours of opening |
-
-### Legendary
-| Badge | Condition |
-|---|---|
-| The Janitor | Delete more lines than added in a month |
-| Ghost Slayer | Close 10+ issues in a single week |
-| Iron Dev | 30-day commit streak |
-| The Wall | Never let a PR sit unreviewed for >4h for an entire week |
-
-Legendary badges animate with a pulsing border and appear in a dedicated showcase on the screen when earned.
+| Level up | Full screen scrim + centered card: "level up" eyebrow + name + new title. 5s. |
+| Boss defeated | Full screen scrim + centered card + CSS confetti. 7s. |
+| Badge earned | Full screen: large icon + name + rarity + earner. 5s. |
+| Rank overtaken | Pill slides down from top of screen. 3s. |
 
 ---
 
-## Leaderboard mechanics
+## Idle animations (always running)
 
-- Sorted by XP descending, always visible on the left panel
-- Top 3 get gold / silver / bronze rank indicators
-- Each row shows: rank, avatar (initials circle), name, level title, current streak fire emoji, XP, mini XP-to-next-level progress bar
-- Rank changes animate: if someone moves up, their row slides up; if someone is overtaken, a big "OVERTAKEN" event fires on the right panel
-- Weekly reset on Monday 00:00 (keeps competition fresh, past trophies persist in trophy case)
-- Seasonal leaderboard (monthly) feeds into reward system
+- Avatar breathe: `scale(1) → scale(1.018)`, 5s loop
+- Last-commit clock in topbar: green < 30m, amber 30-120m, red > 120m
+- Spotlight: `fadeIn` on each panel rotation (0.4s)
+- Leaderboard row on new XP: green flash background, `+XP` float
 
 ---
 
-## Gamification mechanics
+## Demo mode
 
-### Streaks
-- Commit streaks tracked per developer
-- Streak shown as fire emoji + count next to name
-- Breaking a 7+ day streak triggers a "streak broken" animation on the activity feed
-- Streak milestones (3, 7, 14, 30) trigger banner events
-
-### Title belts
-- "The Reviewer" belt: most PR reviews this week — changes hands live
-- "The Closer" belt: most issues closed this week
-- "Speed King" belt: fastest average PR review time
-- Belt transfers animate on screen with both devs shown
-
-### Duels
-- Auto-generated head-to-head between #1 and #2 on leaderboard
-- Shown as a split progress bar in the spotlight panel
-- Updates live as new commits/PRs come in
-- Duel resets weekly
-
-### Boss fight
-- Weekly team goal shown as a health bar at the top of the screen
-- Example goals: "Close 30 issues", "Merge 20 PRs", "Hit 200 commits"
-- Everyone's activity chips away at the bar
-- When the bar hits 0 (goal complete), full-screen victory animation fires
-- New boss spawns immediately with a harder goal
-
-### Ghost mechanic
-- If a developer has had no activity for 3+ days, their avatar gets a ghost overlay on the leaderboard
-- Subtle — not shaming, just visible
+Detected when `CONFIG.pat === 'ghp_YOUR_PAT_HERE'`. Loads:
+- 6 members: Alae, Yassine, Mehdi, Sara, Karim, Nadia
+- Repos: 7odor, api-server, frontend, mobile
+- Pre-seeded feed with realistic commit messages
+- Boss at ~45% progress
+- Karim as ghost (no activity 4 days)
+- `demoTick()` every 7-12s simulates live events
 
 ---
 
-## Screen layout (TV, 1920×1080)
+## Persistence (lib/storage.ts + localStorage)
 
-```
-┌──────────────────────────────────────────────────────────────────┐
-│  BOSS FIGHT BAR — "[Boss name]" — [progress] / [goal]   [timer] │
-├─────────────────────┬────────────────────────────────────────────┤
-│                     │                                            │
-│   LEADERBOARD       │   LIVE ACTIVITY FEED                       │
-│                     │   (scrolling, newest at top)               │
-│   1. Dev name  🔥7  │                                            │
-│   2. Dev name  🔥3  │   Each item: avatar + name + action +      │
-│   3. Dev name       │   repo + XP gained + timestamp             │
-│   4. Dev name 👻    │                                            │
-│   5. Dev name       │                                            │
-│                     │                                            │
-├─────────────────────┴────────────────────────────────────────────┤
-│  SPOTLIGHT PANEL (auto-rotates every 30s)                        │
-│  Modes: MVP of week | Badge showcase | Duel | Fun stat |         │
-│         Streak wall | Open PR shame | Velocity chart            │
-└──────────────────────────────────────────────────────────────────┘
+Persists across page refreshes:
+- `devStats` — XP, streaks, badges
+- `bossProgress` + `bossIndex`
+- `previousRanks`
+- `belts`
+- `weekStart` — detect Monday reset, wipe weekly fields, keep badges/streaks/trophies
+
+---
+
+## Tailwind config extensions
+
+```js
+theme: {
+  extend: {
+    colors: {
+      bg:      '#0a0a0a',
+      panel:   '#111111',
+      raised:  '#1a1a1a',
+      muted:   '#222222',
+      t1:      '#ededed',
+      t2:      '#888888',
+      t3:      '#444444',
+      green:   '#22c55e',
+      blue:    '#3b82f6',
+      purple:  '#a78bfa',
+      amber:   '#f59e0b',
+      red:     '#ef4444',
+      teal:    '#14b8a6',
+    },
+    fontFamily: {
+      mono: ['Geist Mono', 'JetBrains Mono', 'monospace'],
+      sans: ['Geist', 'system-ui', 'sans-serif'],
+    },
+  }
+}
 ```
 
 ---
 
-## Spotlight panel rotation
+## Bootstrap commands
 
-Cycles automatically every 30 seconds through:
+```bash
+npm create vite@latest gitarena -- --template react-ts
+cd gitarena
+npm install zustand framer-motion recharts
+npm install tailwindcss @tailwindcss/vite
+npm install @fontsource/geist @fontsource/geist-mono
+npx tailwindcss init
+```
 
-1. **This week's MVP** — top XP earner, large avatar, stats summary
-2. **Badge just earned** — if a badge was earned in the last cycle, showcase it full-width
-3. **Active duel** — #1 vs #2 head-to-head progress bars
-4. **Fun stat** — e.g. "The team deleted 1,240 lines this week — the repo is getting cleaner 🧹"
-5. **Streak wall** — all active streaks displayed as a grid
-6. **Open PR hall of shame** — PRs sitting unreviewed for >24h, with time elapsed
-7. **Velocity chart** — commits per day this week as a bar chart
-8. **Trophy case** — this month's completed achievements
+Add to `vite.config.ts`:
+```ts
+import tailwindcss from '@tailwindcss/vite'
+plugins: [react(), tailwindcss()]
+```
 
----
-
-## Event animations (on new activity)
-
-| Event | Animation |
-|---|---|
-| New commit | Avatar slides in from left, XP counter ticks up, particle burst on leaderboard row |
-| PR merged | Green flash across leaderboard row, "+120 XP" floats up |
-| Badge earned | Full overlay with badge name, rarity, and earner's name — 5 seconds, then fades |
-| Level up | Full-screen flash, new level title displayed large |
-| Rank change | Rows animate swap, "OVERTAKEN" banner fires on feed |
-| Boss defeated | Full-screen victory animation, confetti, new boss announcement |
-| Streak broken | Sad animation on avatar, streak counter resets |
-| Personal best | "NEW RECORD" banner with stat highlighted |
-
----
-
-## "Alive" between events
-
-The screen should never feel dead:
-
-- Avatars have a subtle idle breathing animation (scale 1.0 → 1.02, 3s loop)
-- XP bars have a shimmer sweep every 8 seconds
-- Activity feed slowly auto-scrolls if nothing new for >2 minutes
-- "Time since last commit" counter shown in the feed header — color shifts green → amber → red as time grows
-- Random fun fact flashes in the spotlight every few cycles
-- Leaderboard rows have a very subtle background pulse on the top-ranked dev
-
----
-
-## Config block (top of HTML file)
-
-```javascript
-const CONFIG = {
-  pat: "ghp_YOUR_PAT_HERE",
-  org: "your-org-name",
-  repos: [],                  // empty = all org repos, or specify ["repo1","repo2"]
-  pollInterval: 60,           // seconds
-  weeklyResetDay: 1,          // 0=Sunday, 1=Monday
-  bossGoals: [
-    { label: "Close 30 issues", metric: "issuesClosed", target: 30 },
-    { label: "Merge 20 PRs", metric: "prsMerged", target: 20 },
-    { label: "Hit 200 commits", metric: "commits", target: 200 },
-  ],
-  spotlightInterval: 30,      // seconds between spotlight panel rotations
-  theme: "dark",              // dark | light
-  teamName: "Dev Team",
-};
+Add to `src/main.tsx`:
+```ts
+import '@fontsource/geist/400.css'
+import '@fontsource/geist/500.css'
+import '@fontsource/geist-mono/400.css'
+import '@fontsource/geist-mono/500.css'
 ```
 
 ---
 
-## Reward integration (later phase)
+## Implementation order
 
-- End-of-month leaderboard snapshot exported as JSON
-- Auto-generate a weekly summary for Slack/Teams: top 3, badge earned, boss status
-- Trophy case persists across monthly resets — past winners always visible
-- Reward tiers can be mapped to XP milestones externally
-
----
-
-## Tech stack
-
-| Layer | Choice |
-|---|---|
-| Frontend | Single HTML file, vanilla JS, CSS animations |
-| Data | GitHub REST API v3 (no GraphQL needed) |
-| Auth | PAT in config, `Authorization: Bearer {pat}` header |
-| Real-time | Polling (60s default); upgrade path to webhook + WebSocket server |
-| Storage | localStorage for XP persistence between page refreshes |
-| Fonts | System font stack (no external font CDN) |
-| Charts | Inline SVG (no chart library dependency) |
-
----
-
-## Implementation phases
-
-### Phase 1 — Core (build first)
-- Config block + GitHub API polling
-- Leaderboard with real org member data
-- XP calculation from commit + PR data
-- Live activity feed
-- Boss fight bar
-- Basic CSS animations on new events
-
-### Phase 2 — Gamification layer
-- Badge system with detection logic
-- Streak tracking (persisted in localStorage)
-- Spotlight panel with rotation
-- Rank change animations
-- Duel mechanic
-
-### Phase 3 — Polish
-- Level-up full-screen events
-- Belt transfer mechanic
-- Fun stat generator
-- Ghost mechanic
-- Open PR shame panel
-- Velocity chart (SVG)
-
-### Phase 4 — Reward integration
-- End-of-month snapshot export
-- Slack/Teams weekly summary POST
-- Trophy case persistence
+1. Scaffold + install deps
+2. `config.ts` + `.gitignore`
+3. `types/index.ts`
+4. `lib/xp.ts` + `lib/badges.ts` + `lib/github.ts` + `lib/storage.ts`
+5. `store/useStore.ts`
+6. `tailwind.config.ts` + global CSS
+7. `App.tsx` — grid layout shell
+8. `TopBar.tsx`
+9. `LeaderboardRow.tsx` + `Leaderboard.tsx`
+10. `FeedItem.tsx` + `ActivityFeed.tsx`
+11. `StatsPanel.tsx` + `BeltPanel.tsx`
+12. All 8 spotlight panel components
+13. `Spotlight.tsx` + `SpotlightNav.tsx`
+14. `useGitHubPoller.ts` + `useFullSync.ts`
+15. Overlay components
+16. Demo mode + demoTick
+17. Idle animations + polish

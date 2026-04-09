@@ -1,0 +1,99 @@
+@import "@fontsource/geist/400.css";
+@import "@fontsource/geist/500.css";
+@import "@fontsource-variable/geist-mono";
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+html, body, #root {
+  margin: 0;
+  padding: 0;
+  width: 1920px;
+  height: 1080px;
+  overflow: hidden;
+  background: #0a0a0a;
+  color: #ededed;
+  font-family: 'Geist', system-ui, sans-serif;
+  -webkit-font-smoothing: antialiased;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+/* ── Subtle animated grid background ── */
+#root {
+  background-image:
+    linear-gradient(rgba(255,255,255,0.015) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(255,255,255,0.015) 1px, transparent 1px);
+  background-size: 40px 40px;
+}
+
+/* ── Glow utilities ── */
+.glow-gold {
+  box-shadow: 0 0 12px rgba(255, 215, 0, 0.35), 0 0 4px rgba(255, 215, 0, 0.15);
+}
+.glow-silver {
+  box-shadow: 0 0 10px rgba(192, 192, 192, 0.3), 0 0 4px rgba(192, 192, 192, 0.12);
+}
+.glow-bronze {
+  box-shadow: 0 0 8px rgba(205, 127, 50, 0.3), 0 0 3px rgba(205, 127, 50, 0.12);
+}
+.glow-green {
+  box-shadow: 0 0 10px rgba(34, 197, 94, 0.3), 0 0 4px rgba(34, 197, 94, 0.12);
+}
+.glow-blue {
+  box-shadow: 0 0 10px rgba(59, 130, 246, 0.3), 0 0 4px rgba(59, 130, 246, 0.12);
+}
+.glow-purple {
+  box-shadow: 0 0 10px rgba(167, 139, 250, 0.3), 0 0 4px rgba(167, 139, 250, 0.12);
+}
+.glow-red {
+  box-shadow: 0 0 10px rgba(239, 68, 68, 0.3), 0 0 4px rgba(239, 68, 68, 0.12);
+}
+.glow-amber {
+  box-shadow: 0 0 10px rgba(245, 158, 11, 0.3), 0 0 4px rgba(245, 158, 11, 0.12);
+}
+
+/* ── Rank row backgrounds ── */
+.rank-1-bg { background: linear-gradient(90deg, rgba(255,215,0,0.06) 0%, transparent 60%); }
+.rank-2-bg { background: linear-gradient(90deg, rgba(192,192,192,0.05) 0%, transparent 60%); }
+.rank-3-bg { background: linear-gradient(90deg, rgba(205,127,50,0.04) 0%, transparent 60%); }
+
+/* ── Gradient progress bars ── */
+.gradient-bar-xp {
+  background: linear-gradient(90deg, #3b82f6, #a78bfa, #22c55e);
+  background-size: 200% 100%;
+  animation: shimmer 3s ease-in-out infinite;
+}
+.gradient-bar-boss {
+  background: linear-gradient(90deg, #ef4444, #f59e0b);
+}
+
+/* ── Avatar ring for top ranks ── */
+.avatar-ring-gold { box-shadow: 0 0 0 2px #FFD700, 0 0 8px rgba(255,215,0,0.4); }
+.avatar-ring-silver { box-shadow: 0 0 0 2px #C0C0C0, 0 0 6px rgba(192,192,192,0.3); }
+.avatar-ring-bronze { box-shadow: 0 0 0 2px #CD7F32, 0 0 5px rgba(205,127,50,0.25); }
+
+/* ── Scrollbar ── */
+::-webkit-scrollbar {
+  width: 4px;
+}
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+::-webkit-scrollbar-thumb {
+  background: rgba(255,255,255,0.08);
+  border-radius: 2px;
+}
+
+/* ── Shimmer text effect for MVP ── */
+.shimmer-text {
+  background: linear-gradient(90deg, #ededed 0%, #FFD700 50%, #ededed 100%);
+  background-size: 200% auto;
+  -webkit-background-clip: text;
+  background-clip: text;
+  -webkit-text-fill-color: transparent;
+  animation: shimmer 3s linear infinite;
+}
