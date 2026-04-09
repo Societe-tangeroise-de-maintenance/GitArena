@@ -28,7 +28,7 @@ export interface DevStats {
 
 export interface FeedItem {
   id: string;
-  type: 'commit' | 'pr-opened' | 'pr-merged' | 'review' | 'issue' | 'badge' | 'streak' | 'level-up';
+  type: 'commit' | 'pr-opened' | 'pr-merged' | 'review' | 'issue' | 'issue-opened' | 'badge' | 'streak' | 'level-up';
   user: string;
   repo: string;
   message: string;

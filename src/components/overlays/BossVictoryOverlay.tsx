@@ -1,5 +1,6 @@
 import { motion } from 'framer-motion';
 import { useEffect, useMemo } from 'react';
+import { sfxBossVictory } from '../../lib/sounds';
 
 interface Props {
   onDone: () => void;
@@ -18,6 +19,7 @@ function generateConfetti(count: number) {
 
 export function BossVictoryOverlay({ onDone }: Props) {
   useEffect(() => {
+    sfxBossVictory();
     const t = setTimeout(onDone, 4000);
     return () => clearTimeout(t);
   }, [onDone]);
@@ -70,7 +72,7 @@ export function BossVictoryOverlay({ onDone }: Props) {
           Team Victory!
         </span>
         <span className="font-mono text-[14px] text-t2">
-          All goals completed this week ✅
+          All goals completed this month ✅
         </span>
       </motion.div>
     </motion.div>

@@ -9,72 +9,209 @@
 html, body, #root {
   margin: 0;
   padding: 0;
-  width: 1920px;
-  height: 1080px;
+  width: 100vw;
+  height: 100vh;
   overflow: hidden;
-  background: #0a0a0a;
+  background: #0c0c18;
   color: #ededed;
   font-family: 'Geist', system-ui, sans-serif;
   -webkit-font-smoothing: antialiased;
+}
+
+/*
+ * Fullscreen brightness fix:
+ * HDMI-connected displays (especially TVs) often switch color range
+ * from limited (16-235) to full (0-255) when fullscreen is detected,
+ * crushing blacks and darkening the image. We compensate with brightness.
+ */
+html.fullscreen-active {
+  filter: brightness(1.15);
 }
 
 * {
   box-sizing: border-box;
 }
 
-/* ── Subtle animated grid background ── */
+/* ── Animated neon gradient mesh background ── */
 #root {
+  position: relative;
+  background: #0c0c18;
+}
+#root::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background:
+    radial-gradient(ellipse 600px 400px at 15% 20%, rgba(6,182,212,0.12) 0%, transparent 70%),
+    radial-gradient(ellipse 500px 350px at 85% 75%, rgba(167,139,250,0.10) 0%, transparent 70%),
+    radial-gradient(ellipse 400px 300px at 50% 50%, rgba(59,130,246,0.08) 0%, transparent 70%);
+  animation: gradient-drift 20s ease-in-out infinite alternate;
+  z-index: 0;
+  pointer-events: none;
+}
+#root::after {
+  content: '';
+  position: absolute;
+  inset: 0;
   background-image:
-    linear-gradient(rgba(255,255,255,0.015) 1px, transparent 1px),
-    linear-gradient(90deg, rgba(255,255,255,0.015) 1px, transparent 1px);
+    linear-gradient(rgba(255,255,255,0.02) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(255,255,255,0.02) 1px, transparent 1px);
   background-size: 40px 40px;
+  z-index: 0;
+  pointer-events: none;
+}
+#root > * {
+  position: relative;
+  z-index: 1;
 }
 
-/* ── Glow utilities ── */
+@keyframes gradient-drift {
+  0% { background-position: 0% 0%; }
+  100% { background-position: 100% 100%; }
+}
+
+/* ── Panel styling with neon border ── */
+.panel-glow {
+  background: #111111;
+  border: 1px solid rgba(6,182,212,0.08);
+  box-shadow: inset 0 1px 0 rgba(255,255,255,0.03);
+}
+
+/* ── Neon gradient border accent ── */
+.neon-border-b {
+  border-bottom: 1px solid transparent;
+  border-image: linear-gradient(90deg, rgba(6,182,212,0.15), rgba(167,139,250,0.15), rgba(6,182,212,0.15)) 1;
+}
+.neon-border-r {
+  border-right: 1px solid transparent;
+  border-image: linear-gradient(180deg, rgba(6,182,212,0.12), rgba(167,139,250,0.12), rgba(6,182,212,0.12)) 1;
+}
+.neon-border-t {
+  border-top: 1px solid transparent;
+  border-image: linear-gradient(90deg, rgba(6,182,212,0.15), rgba(167,139,250,0.15), rgba(6,182,212,0.15)) 1;
+}
+
+/* ── Glow utilities (boosted intensity) ── */
 .glow-gold {
-  box-shadow: 0 0 12px rgba(255, 215, 0, 0.35), 0 0 4px rgba(255, 215, 0, 0.15);
+  box-shadow: 0 0 20px rgba(255, 215, 0, 0.5), 0 0 6px rgba(255, 215, 0, 0.25), 0 0 40px rgba(255, 215, 0, 0.15);
 }
 .glow-silver {
-  box-shadow: 0 0 10px rgba(192, 192, 192, 0.3), 0 0 4px rgba(192, 192, 192, 0.12);
+  box-shadow: 0 0 16px rgba(192, 192, 192, 0.4), 0 0 5px rgba(192, 192, 192, 0.2);
 }
 .glow-bronze {
-  box-shadow: 0 0 8px rgba(205, 127, 50, 0.3), 0 0 3px rgba(205, 127, 50, 0.12);
+  box-shadow: 0 0 12px rgba(205, 127, 50, 0.4), 0 0 4px rgba(205, 127, 50, 0.2);
 }
 .glow-green {
-  box-shadow: 0 0 10px rgba(34, 197, 94, 0.3), 0 0 4px rgba(34, 197, 94, 0.12);
+  box-shadow: 0 0 14px rgba(34, 197, 94, 0.45), 0 0 5px rgba(34, 197, 94, 0.2);
 }
 .glow-blue {
-  box-shadow: 0 0 10px rgba(59, 130, 246, 0.3), 0 0 4px rgba(59, 130, 246, 0.12);
+  box-shadow: 0 0 14px rgba(59, 130, 246, 0.45), 0 0 5px rgba(59, 130, 246, 0.2);
 }
 .glow-purple {
-  box-shadow: 0 0 10px rgba(167, 139, 250, 0.3), 0 0 4px rgba(167, 139, 250, 0.12);
+  box-shadow: 0 0 14px rgba(167, 139, 250, 0.45), 0 0 5px rgba(167, 139, 250, 0.2);
 }
 .glow-red {
-  box-shadow: 0 0 10px rgba(239, 68, 68, 0.3), 0 0 4px rgba(239, 68, 68, 0.12);
+  box-shadow: 0 0 14px rgba(239, 68, 68, 0.45), 0 0 5px rgba(239, 68, 68, 0.2);
 }
 .glow-amber {
-  box-shadow: 0 0 10px rgba(245, 158, 11, 0.3), 0 0 4px rgba(245, 158, 11, 0.12);
+  box-shadow: 0 0 14px rgba(245, 158, 11, 0.45), 0 0 5px rgba(245, 158, 11, 0.2);
+}
+.glow-cyan {
+  box-shadow: 0 0 14px rgba(6, 182, 212, 0.45), 0 0 5px rgba(6, 182, 212, 0.2);
 }
 
-/* ── Rank row backgrounds ── */
-.rank-1-bg { background: linear-gradient(90deg, rgba(255,215,0,0.06) 0%, transparent 60%); }
-.rank-2-bg { background: linear-gradient(90deg, rgba(192,192,192,0.05) 0%, transparent 60%); }
-.rank-3-bg { background: linear-gradient(90deg, rgba(205,127,50,0.04) 0%, transparent 60%); }
+/* ── Rank row backgrounds (stronger) ── */
+.rank-1-bg {
+  background: linear-gradient(90deg, rgba(255,215,0,0.22) 0%, rgba(255,215,0,0.08) 50%, transparent 80%);
+  border-left: 3px solid #FFD700;
+}
+.rank-2-bg {
+  background: linear-gradient(90deg, rgba(192,192,192,0.16) 0%, rgba(192,192,192,0.05) 50%, transparent 80%);
+  border-left: 3px solid #C0C0C0;
+}
+.rank-3-bg {
+  background: linear-gradient(90deg, rgba(205,127,50,0.15) 0%, rgba(205,127,50,0.05) 50%, transparent 80%);
+  border-left: 3px solid #CD7F32;
+}
 
 /* ── Gradient progress bars ── */
 .gradient-bar-xp {
-  background: linear-gradient(90deg, #3b82f6, #a78bfa, #22c55e);
+  background: linear-gradient(90deg, #06b6d4, #3b82f6, #a78bfa, #22c55e);
   background-size: 200% 100%;
   animation: shimmer 3s ease-in-out infinite;
+  position: relative;
+}
+.gradient-bar-xp::after {
+  content: '';
+  position: absolute;
+  right: -2px;
+  top: -2px;
+  bottom: -2px;
+  width: 8px;
+  background: inherit;
+  filter: blur(4px);
+  border-radius: 4px;
 }
 .gradient-bar-boss {
   background: linear-gradient(90deg, #ef4444, #f59e0b);
 }
 
-/* ── Avatar ring for top ranks ── */
-.avatar-ring-gold { box-shadow: 0 0 0 2px #FFD700, 0 0 8px rgba(255,215,0,0.4); }
-.avatar-ring-silver { box-shadow: 0 0 0 2px #C0C0C0, 0 0 6px rgba(192,192,192,0.3); }
-.avatar-ring-bronze { box-shadow: 0 0 0 2px #CD7F32, 0 0 5px rgba(205,127,50,0.25); }
+/* ── Avatar ring for top ranks (stronger) ── */
+.avatar-ring-gold { box-shadow: 0 0 0 2px #FFD700, 0 0 12px rgba(255,215,0,0.5), 0 0 24px rgba(255,215,0,0.2); }
+.avatar-ring-silver { box-shadow: 0 0 0 2px #C0C0C0, 0 0 10px rgba(192,192,192,0.4); }
+.avatar-ring-bronze { box-shadow: 0 0 0 2px #CD7F32, 0 0 8px rgba(205,127,50,0.35); }
+
+/* ── Active member pulse (activity in last 5 min) ── */
+.active-pulse {
+  animation: glow-breathe 2.5s ease-in-out infinite;
+  border-left: 2px solid rgba(34,197,94,0.5) !important;
+}
+@keyframes glow-breathe {
+  0%, 100% { box-shadow: inset 0 0 0 rgba(34,197,94,0), 0 0 0 rgba(34,197,94,0); }
+  50% { box-shadow: inset 0 0 12px rgba(34,197,94,0.06), 0 0 6px rgba(34,197,94,0.08); }
+}
+
+/* ── Level badge gradient ── */
+.level-pill-gold { background: linear-gradient(135deg, #FFD700, #B8860B); color: #0a0a0a; }
+.level-pill-silver { background: linear-gradient(135deg, #C0C0C0, #808080); color: #0a0a0a; }
+.level-pill-bronze { background: linear-gradient(135deg, #CD7F32, #8B4513); color: #0a0a0a; }
+.level-pill-default { background: rgba(68,68,68,0.5); color: #ededed; }
+
+/* ── Feed item neon type bar ── */
+.feed-bar { width: 4px; border-radius: 2px; position: relative; }
+.feed-bar::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  border-radius: 2px;
+  filter: blur(3px);
+  background: inherit;
+}
+
+/* ── Feed item flash-in animation ── */
+.feed-flash-in {
+  animation: feed-slide-in 0.4s ease-out;
+}
+@keyframes feed-slide-in {
+  0% { opacity: 0; transform: translateX(20px); }
+  60% { opacity: 1; }
+  100% { transform: translateX(0); }
+}
+
+/* ── Epic feed row (PR merged, boss events) ── */
+.feed-epic {
+  background: linear-gradient(90deg, rgba(255,215,0,0.06) 0%, transparent 40%);
+  border-left: 2px solid rgba(255,215,0,0.3);
+}
+
+/* ── XP badge glow pulse ── */
+.xp-badge-glow {
+  animation: xp-pulse 1s ease-out;
+}
+@keyframes xp-pulse {
+  0% { box-shadow: 0 0 8px rgba(34,197,94,0.6); }
+  100% { box-shadow: 0 0 0 rgba(34,197,94,0); }
+}
 
 /* ── Scrollbar ── */
 ::-webkit-scrollbar {
@@ -96,4 +233,73 @@ html, body, #root {
   background-clip: text;
   -webkit-text-fill-color: transparent;
   animation: shimmer 3s linear infinite;
+}
+
+/* ── Neon text glow ── */
+.neon-text-cyan {
+  text-shadow: 0 0 8px rgba(6,182,212,0.5), 0 0 20px rgba(6,182,212,0.2);
+}
+.neon-text-gold {
+  text-shadow: 0 0 8px rgba(255,215,0,0.5), 0 0 20px rgba(255,215,0,0.2);
+}
+.neon-text-green {
+  text-shadow: 0 0 8px rgba(34,197,94,0.5), 0 0 20px rgba(34,197,94,0.2);
+}
+.neon-text-red {
+  text-shadow: 0 0 8px rgba(239,68,68,0.5), 0 0 20px rgba(239,68,68,0.2);
+}
+.neon-text-purple {
+  text-shadow: 0 0 8px rgba(167,139,250,0.5), 0 0 20px rgba(167,139,250,0.2);
+}
+
+/* ── Ambient particles ── */
+.particle {
+  position: absolute;
+  border-radius: 50%;
+  pointer-events: none;
+  animation: particle-float linear infinite;
+  opacity: 0;
+}
+@keyframes particle-float {
+  0% { transform: translateY(0) translateX(0); opacity: 0; }
+  10% { opacity: 0.4; }
+  90% { opacity: 0.4; }
+  100% { transform: translateY(-200px) translateX(30px); opacity: 0; }
+}
+
+/* ── Achievement cinematic ── */
+.achievement-backdrop {
+  background: radial-gradient(ellipse 50% 50% at 50% 50%, rgba(0,0,0,0.6) 0%, rgba(0,0,0,0.85) 100%);
+}
+.achievement-ring-common {
+  box-shadow: 0 0 30px rgba(59,130,246,0.5), 0 0 60px rgba(59,130,246,0.2), 0 0 0 3px rgba(59,130,246,0.3);
+}
+.achievement-ring-rare {
+  box-shadow: 0 0 40px rgba(167,139,250,0.6), 0 0 80px rgba(167,139,250,0.25), 0 0 0 3px rgba(167,139,250,0.4);
+}
+.achievement-ring-legendary {
+  box-shadow: 0 0 50px rgba(255,215,0,0.7), 0 0 100px rgba(255,215,0,0.3), 0 0 0 3px rgba(255,215,0,0.5);
+  animation: legendary-pulse 1s ease-in-out infinite;
+}
+@keyframes legendary-pulse {
+  0%, 100% { box-shadow: 0 0 50px rgba(255,215,0,0.7), 0 0 100px rgba(255,215,0,0.3), 0 0 0 3px rgba(255,215,0,0.5); }
+  50% { box-shadow: 0 0 70px rgba(255,215,0,0.9), 0 0 120px rgba(255,215,0,0.4), 0 0 0 4px rgba(255,215,0,0.7); }
+}
+
+/* ── Pulsing VS text ── */
+.vs-pulse {
+  animation: vs-glow 2s ease-in-out infinite;
+}
+@keyframes vs-glow {
+  0%, 100% { text-shadow: 0 0 4px rgba(239,68,68,0.3); opacity: 0.7; }
+  50% { text-shadow: 0 0 16px rgba(239,68,68,0.7), 0 0 30px rgba(239,68,68,0.3); opacity: 1; }
+}
+
+/* ── Shame pulsing border ── */
+.shame-card {
+  animation: shame-pulse 3s ease-in-out infinite;
+}
+@keyframes shame-pulse {
+  0%, 100% { border-color: rgba(239,68,68,0.2); box-shadow: 0 0 0 rgba(239,68,68,0); }
+  50% { border-color: rgba(239,68,68,0.5); box-shadow: 0 0 12px rgba(239,68,68,0.15); }
 }

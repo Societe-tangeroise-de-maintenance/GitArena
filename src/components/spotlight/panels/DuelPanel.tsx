@@ -55,7 +55,7 @@ export function DuelPanel() {
         </div>
         <div className="flex justify-between w-full">
           <span className="font-mono text-[12px] text-t1 font-medium">{pct1}%</span>
-          <span className="font-mono text-[10px] text-t3">vs</span>
+          <span className="font-mono text-[10px] text-t3 vs-pulse">vs</span>
           <span className="font-mono text-[12px] text-t1 font-medium">{pct2}%</span>
         </div>
       </div>

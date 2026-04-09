@@ -1,7 +1,6 @@
 import { useStore } from '../../store/useStore';
 import { rankedLogins } from '../../store/useStore';
 import { LeaderboardRow } from './LeaderboardRow';
-import { AnimatePresence } from 'framer-motion';
 import { useRef, useEffect } from 'react';
 
 export function Leaderboard() {
@@ -52,22 +51,20 @@ export function Leaderboard() {
 
       {/* Pinned top 3 */}
       <div className="shrink-0">
-        <AnimatePresence>
-          {top3.map((login, i) => {
-            const member = memberMap.get(login);
-            if (!member) return null;
-            return (
-              <LeaderboardRow
-                key={login}
-                login={login}
-                rank={i + 1}
-                color={member.color}
-                name={member.name}
-                avatarUrl={member.avatarUrl}
-              />
-            );
-          })}
-        </AnimatePresence>
+        {top3.map((login, i) => {
+          const member = memberMap.get(login);
+          if (!member) return null;
+          return (
+            <LeaderboardRow
+              key={login}
+              login={login}
+              rank={i + 1}
+              color={member.color}
+              name={member.name}
+              avatarUrl={member.avatarUrl}
+            />
+          );
+        })}
       </div>
 
       {/* Scrollable rest */}
@@ -75,22 +72,20 @@ export function Leaderboard() {
         <>
           <div className="h-[1px] bg-border mx-4" />
           <div ref={scrollRef} className="flex-1 overflow-y-auto">
-            <AnimatePresence>
-              {rest.map((login, i) => {
-                const member = memberMap.get(login);
-                if (!member) return null;
-                return (
-                  <LeaderboardRow
-                    key={login}
-                    login={login}
-                    rank={i + 4}
-                    color={member.color}
-                    name={member.name}
-                    avatarUrl={member.avatarUrl}
-                  />
-                );
-              })}
-            </AnimatePresence>
+            {rest.map((login, i) => {
+              const member = memberMap.get(login);
+              if (!member) return null;
+              return (
+                <LeaderboardRow
+                  key={login}
+                  login={login}
+                  rank={i + 4}
+                  color={member.color}
+                  name={member.name}
+                  avatarUrl={member.avatarUrl}
+                />
+              );
+            })}
           </div>
         </>
       )}

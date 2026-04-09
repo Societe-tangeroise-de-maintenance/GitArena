@@ -24,7 +24,7 @@ export function ShamePanel() {
         {shamePRs.slice(0, 5).map((pr, i) => (
           <div
             key={i}
-            className="bg-raised border border-red/20 rounded-[6px] p-3 min-w-[200px] max-w-[240px] glow-red"
+            className="bg-raised border border-red/20 rounded-[6px] p-3 min-w-[200px] max-w-[240px] glow-red shame-card"
           >
             <div className="h-[2px] gradient-bar-boss rounded-full mb-2" />
             <div className="text-[12px] text-t1 truncate font-medium">{pr.title}</div>

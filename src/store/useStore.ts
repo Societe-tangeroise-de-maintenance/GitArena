@@ -3,7 +3,7 @@ import type { DevStats, FeedItem, Member, Belts, ShamePR } from '../types';
 import { CONFIG } from '../config';
 import { XP_VALUES, getLevel } from '../lib/xp';
 import { saveState, loadState } from '../lib/storage';
-import { weekStart, isBot } from '../lib/github';
+import { monthStart, isBot } from '../lib/github';
 
 // ── Helpers ──────────────────────────────────────
 
@@ -63,6 +63,7 @@ interface AppState {
   setSpotlightMode: (mode: number) => void;
   nextSpotlight: () => void;
   ensureMember: (login: string, avatarUrl?: string) => void;
+  applySyncData: (data: Array<{ login: string; avatarUrl: string; xp: number; commits: number; prOpens: number; prMerges: number; issueCloses: number }>, feedItems: FeedItem[]) => void;
   pushOverlay: (overlay: { type: string; payload: Record<string, unknown> }) => void;
   popOverlay: () => void;
   checkWeeklyReset: () => void;
@@ -80,7 +81,7 @@ export const useStore = create<AppState>((set, get) => ({
   belts: { reviewer: null, closer: null, speedKing: null },
   shamePRs: [],
   spotlightMode: 0,
-  weekStartDate: weekStart(),
+  weekStartDate: monthStart(),
   isDemo: CONFIG.pat === 'ghp_YOUR_PAT_HERE',
   overlayQueue: [],
 
@@ -134,6 +135,7 @@ export const useStore = create<AppState>((set, get) => ({
     const oldLevel = getLevel(s.totalXp).level;
     s.weeklyXp += amount;
     s.totalXp += amount;
+    console.log(`[GitArena] +${amount}xp ${login} (${type}) → ${s.weeklyXp}xp total`);
     s.lastActivityTime = eventTime || new Date().toISOString();
     stats[login] = s;
 
@@ -147,7 +149,9 @@ export const useStore = create<AppState>((set, get) => ({
       xp: amount,
       time: eventTime || new Date().toISOString(),
     };
-    const feed = [feedItem, ...get().feed].slice(0, 50);
+    const feed = [feedItem, ...get().feed]
+      .sort((a, b) => new Date(b.time).getTime() - new Date(a.time).getTime())
+      .slice(0, 50);
 
     const newLevel = getLevel(s.totalXp).level;
     const overlayQueue = [...get().overlayQueue];
@@ -159,7 +163,7 @@ export const useStore = create<AppState>((set, get) => ({
     }
 
     // Check rank overtaken
-    const ranked = rankedLogins(get().stats);
+    const ranked = rankedLogins(stats);
     const prevRanks = get().previousRanks;
     const newRank = ranked.indexOf(login) + 1;
     const oldRank = prevRanks[login] || newRank;
@@ -170,7 +174,11 @@ export const useStore = create<AppState>((set, get) => ({
       });
     }
 
-    set({ stats, feed, overlayQueue });
+    // Update previousRanks snapshot
+    const newPreviousRanks: Record<string, number> = {};
+    ranked.forEach((l, i) => { newPreviousRanks[l] = i + 1; });
+
+    set({ stats, feed, overlayQueue, previousRanks: newPreviousRanks });
   },
 
   bumpStreak: (login) => {
@@ -197,6 +205,10 @@ export const useStore = create<AppState>((set, get) => ({
 
     stats[login] = s;
     set({ stats });
+
+    // Auto-detect streak badges
+    if (s.streak >= 30 && !s.badges.includes('ironDev')) get().awardBadge(login, 'ironDev');
+    else if (s.streak >= 7 && !s.badges.includes('streakMaster')) get().awardBadge(login, 'streakMaster');
   },
 
   awardBadge: (login, badgeId) => {
@@ -206,7 +218,7 @@ export const useStore = create<AppState>((set, get) => ({
     s.badges = [...s.badges, badgeId];
     stats[login] = s;
     const overlayQueue = [...get().overlayQueue, {
-      type: 'badge',
+      type: 'achievement',
       payload: { login, badgeId },
     }];
     set({ stats, overlayQueue });
@@ -218,6 +230,14 @@ export const useStore = create<AppState>((set, get) => ({
     (s[field] as number) += delta;
     stats[login] = s;
     set({ stats });
+
+    // Auto-detect count-based badges
+    if (field === 'weeklyIssuesClosed' && s.weeklyIssuesClosed >= 10 && !s.badges.includes('ghostSlayer')) {
+      get().awardBadge(login, 'ghostSlayer');
+    }
+    if (field === 'dailyIssuesClosed' && s.dailyIssuesClosed >= 5 && !s.badges.includes('closer')) {
+      get().awardBadge(login, 'closer');
+    }
   },
 
   addLines: (login, added, deleted) => {
@@ -254,12 +274,52 @@ export const useStore = create<AppState>((set, get) => ({
   setSpotlightMode: (mode) => set({ spotlightMode: mode }),
   nextSpotlight: () => set((s) => ({ spotlightMode: (s.spotlightMode + 1) % 8 })),
 
+  applySyncData: (data, feedItems) => {
+    const stats = { ...get().stats };
+    const members = [...get().members];
+    const loginSet = new Set(members.map(m => m.login));
+    const COLORS = ['#3b82f6', '#a78bfa', '#22c55e', '#f59e0b', '#ef4444', '#14b8a6', '#ec4899', '#8b5cf6', '#06b6d4', '#f97316'];
+
+    for (const d of data) {
+      // Ensure member exists
+      if (!loginSet.has(d.login)) {
+        loginSet.add(d.login);
+        members.push({ login: d.login, name: d.login, color: COLORS[members.length % COLORS.length], avatarUrl: d.avatarUrl });
+      }
+      if (!stats[d.login]) stats[d.login] = emptyStats(d.login);
+      const s = { ...stats[d.login] };
+
+      // Use max() so we never regress below search-computed values,
+      // but allow poller to push above if it has newer data
+      if (d.xp > s.weeklyXp) {
+        s.weeklyXp = d.xp;
+        s.totalXp = d.xp;
+      }
+      if (d.commits > s.weeklyCommits) s.weeklyCommits = d.commits;
+      if (d.prOpens > s.weeklyPRsOpened) s.weeklyPRsOpened = d.prOpens;
+      if (d.prMerges > s.weeklyPRsMerged) s.weeklyPRsMerged = d.prMerges;
+      if (d.issueCloses > s.weeklyIssuesClosed) s.weeklyIssuesClosed = d.issueCloses;
+      stats[d.login] = s;
+    }
+
+    // Merge feed items (keep newest 50)
+    const existingFeed = get().feed;
+    const existingIds = new Set(existingFeed.map(f => f.id));
+    const newItems = feedItems.filter(f => !existingIds.has(f.id));
+    const feed = [...existingFeed, ...newItems]
+      .sort((a, b) => new Date(b.time).getTime() - new Date(a.time).getTime())
+      .slice(0, 50);
+
+    console.log(`[GitArena:sync] Applied sync data for ${data.length} users, ${newItems.length} new feed items`);
+    set({ stats, members, feed });
+  },
+
   pushOverlay: (overlay) => set((s) => ({ overlayQueue: [...s.overlayQueue, overlay] })),
   popOverlay: () => set((s) => ({ overlayQueue: s.overlayQueue.slice(1) })),
 
   checkWeeklyReset: () => {
-    const ws = weekStart();
-    if (ws !== get().weekStartDate) {
+    const ms = monthStart();
+    if (ms !== get().weekStartDate) {
       const stats = { ...get().stats };
       for (const login of Object.keys(stats)) {
         const s = { ...stats[login] };
@@ -275,7 +335,7 @@ export const useStore = create<AppState>((set, get) => ({
         s.dailyIssuesClosed = 0;
         stats[login] = s;
       }
-      set({ stats, weekStartDate: ws, bossProgress: {}, previousRanks: {} });
+      set({ stats, weekStartDate: ms, bossProgress: {}, previousRanks: {} });
     }
   },
 
@@ -288,6 +348,7 @@ export const useStore = create<AppState>((set, get) => ({
       previousRanks: s.previousRanks,
       belts: s.belts,
       weekStart: s.weekStartDate,
+      feed: s.feed,
     });
   },
 
@@ -301,9 +362,29 @@ export const useStore = create<AppState>((set, get) => ({
       previousRanks: saved.previousRanks,
       belts: saved.belts,
       weekStartDate: saved.weekStart,
+      feed: (saved.feed || []) as FeedItem[],
     });
   },
 }));
+
+// Expose debug tool on window for testing
+if (typeof window !== 'undefined') {
+  (window as unknown as Record<string, unknown>).__gitarena = {
+    getState: () => useStore.getState(),
+    getStats: () => useStore.getState().stats,
+    getRanking: () => rankedLogins(useStore.getState().stats).map((login, i) => {
+      const s = useStore.getState().stats[login];
+      return `#${i + 1} ${login}: ${s?.weeklyXp || 0} XP`;
+    }),
+    getFeed: () => useStore.getState().feed.slice(0, 10),
+    forceReset: () => {
+      localStorage.removeItem('gitarena_state');
+      localStorage.removeItem('gitarena_seenIds');
+      localStorage.removeItem('gitarena_schema');
+      location.reload();
+    },
+  };
+}
 
 // Helper selector
 export function rankedLogins(stats: Record<string, DevStats>): string[] {

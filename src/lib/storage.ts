@@ -1,5 +1,5 @@
 const STORAGE_KEY = 'gitarena_state';
-const SCHEMA_VERSION = 4; // Bump to reprocess empty-commit push events
+const SCHEMA_VERSION = 8; // Fix dedup keys + feed ordering
 const VERSION_KEY = 'gitarena_schema';
 
 export interface PersistedState {
@@ -9,6 +9,8 @@ export interface PersistedState {
   previousRanks: Record<string, number>;
   belts: { reviewer: string | null; closer: string | null; speedKing: string | null };
   weekStart: string;
+  feed?: unknown[];
+  seenIds?: string[];
 }
 
 export function loadState(): PersistedState | null {
@@ -38,4 +40,5 @@ export function saveState(state: PersistedState): void {
 
 export function clearState(): void {
   localStorage.removeItem(STORAGE_KEY);
+  localStorage.removeItem('gitarena_seenIds');
 }

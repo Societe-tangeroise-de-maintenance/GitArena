@@ -4,6 +4,7 @@ export const XP_VALUES = {
   prMerged: 120,
   prReviewed: 60,
   issueClosed: 40,
+  issueOpened: 20,
   firstCommit: 30,
   netNegativePR: 70,
   streakBonus: 200,

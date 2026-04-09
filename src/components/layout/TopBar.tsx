@@ -44,7 +44,7 @@ export function TopBar() {
       <div className="flex items-center gap-4">
         <div className="flex items-center gap-2">
           <span className="text-[20px]">⚔️</span>
-          <span className="font-mono text-[18px] font-medium text-t1 tracking-tight">
+          <span className="font-mono text-[18px] font-medium tracking-tight neon-text-cyan">
             GitArena
           </span>
         </div>
@@ -64,7 +64,7 @@ export function TopBar() {
         {goal && (
           <div className="flex items-center gap-3 bg-raised/50 rounded-lg px-4 py-1.5">
             <span className="text-[14px]">👾</span>
-            <span className="font-mono text-[10px] text-red uppercase tracking-wider font-medium">
+            <span className="font-mono text-[10px] text-red uppercase tracking-wider font-medium neon-text-red">
               boss
             </span>
             <div className="w-[180px] h-[8px] bg-muted rounded-full overflow-hidden relative">
@@ -104,7 +104,7 @@ function StatPill({ icon, label, value, glow }: { icon: string; label: string; v
     <div className={`flex items-center gap-1.5 ${glow ? 'glow-green rounded-md px-2 py-0.5' : ''}`}>
       <span className="text-[11px]">{icon}</span>
       <span className="font-mono text-[10px] text-t3">{label}</span>
-      <span className="font-mono text-[14px] text-t1 font-medium">{value.toLocaleString()}</span>
+      <span className={`font-mono text-[14px] font-medium ${glow ? 'neon-text-green' : 'text-t1'}`}>{value.toLocaleString()}</span>
     </div>
   );
 }

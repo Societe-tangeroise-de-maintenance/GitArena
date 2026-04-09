@@ -32,8 +32,8 @@ export function MVPPanel() {
       </div>
 
       <div className="flex flex-col gap-1">
-        <span className="font-mono text-[10px] text-gold uppercase tracking-[3px] font-medium">
-          🏆 mvp this week
+        <span className="font-mono text-[10px] uppercase tracking-[3px] font-medium neon-text-gold">
+          🏆 mvp this month
         </span>
         <span className="text-[24px] font-medium shimmer-text">
           {member?.name || topLogin}
@@ -44,21 +44,21 @@ export function MVPPanel() {
       </div>
 
       <div className="ml-auto grid grid-cols-5 gap-6">
-        <StatBlock icon="📦" label="commits" value={s.weeklyCommits} />
-        <StatBlock icon="✅" label="merged" value={s.weeklyPRsMerged} />
-        <StatBlock icon="👁️" label="reviews" value={s.weeklyPRsReviewed} />
-        <StatBlock icon="🎯" label="issues" value={s.weeklyIssuesClosed} />
-        <StatBlock icon="🔥" label="streak" value={s.streak} suffix="d" />
+        <StatBlock icon="📦" label="commits" value={s.weeklyCommits} glow />
+        <StatBlock icon="✅" label="merged" value={s.weeklyPRsMerged} glow />
+        <StatBlock icon="👁️" label="reviews" value={s.weeklyPRsReviewed} glow />
+        <StatBlock icon="🎯" label="issues" value={s.weeklyIssuesClosed} glow />
+        <StatBlock icon="🔥" label="streak" value={s.streak} suffix="d" glow />
       </div>
     </div>
   );
 }
 
-function StatBlock({ icon, label, value, suffix }: { icon: string; label: string; value: number; suffix?: string }) {
+function StatBlock({ icon, label, value, suffix, glow }: { icon: string; label: string; value: number; suffix?: string; glow?: boolean }) {
   return (
     <div className="flex flex-col items-center">
       <span className="text-[14px] mb-1">{icon}</span>
-      <span className="font-mono text-[20px] text-t1 font-medium">
+      <span className={`font-mono text-[20px] font-medium ${glow ? 'neon-text-cyan' : 'text-t1'}`}>
         {value}{suffix || ''}
       </span>
       <span className="font-mono text-[10px] text-t3">{label}</span>

@@ -2,13 +2,7 @@ import { useStore } from '../../store/useStore';
 import { FeedItem } from './FeedItem';
 import { useRef, useEffect, useMemo } from 'react';
 
-function isToday(time: string): boolean {
-  const d = new Date(time);
-  const now = new Date();
-  return d.getFullYear() === now.getFullYear() &&
-    d.getMonth() === now.getMonth() &&
-    d.getDate() === now.getDate();
-}
+const PINNED_COUNT = 15;
 
 export function ActivityFeed() {
   const feed = useStore((s) => s.feed);
@@ -20,10 +14,10 @@ export function ActivityFeed() {
     [feed],
   );
 
-  const todayItems = sorted.filter((item) => isToday(item.time));
-  const olderItems = sorted.filter((item) => !isToday(item.time));
+  const pinnedItems = sorted.slice(0, PINNED_COUNT);
+  const scrollItems = sorted.slice(PINNED_COUNT);
 
-  // Auto-scroll only the older section
+  // Auto-scroll only the overflow section
   useEffect(() => {
     const el = scrollRef.current;
     if (!el) return;
@@ -46,13 +40,13 @@ export function ActivityFeed() {
     }
     raf = requestAnimationFrame(step);
     return () => cancelAnimationFrame(raf);
-  }, [olderItems.length]);
+  }, [scrollItems.length]);
 
   return (
     <div className="h-full flex flex-col">
       <div className="px-4 py-3 flex items-center gap-2">
         <span className="text-[14px]">📡</span>
-        <span className="font-mono text-[11px] text-t3 uppercase tracking-wider">
+        <span className="font-mono text-[11px] text-t3 uppercase tracking-wider neon-text-cyan">
           live activity
         </span>
         {feed.length > 0 && (
@@ -63,28 +57,28 @@ export function ActivityFeed() {
         )}
       </div>
 
-      {/* Today's events — pinned, static */}
-      {todayItems.length > 0 && (
-        <div className="shrink-0 max-h-[60%] overflow-y-auto">
+      {/* Latest events — pinned, static */}
+      {pinnedItems.length > 0 && (
+        <div className="shrink-0 max-h-[60%] overflow-hidden">
           <div className="px-4 py-1">
-            <span className="font-mono text-[9px] text-green uppercase tracking-wider">today</span>
+            <span className="font-mono text-[9px] text-green uppercase tracking-wider neon-text-green">latest</span>
           </div>
-          {todayItems.map((item, i) => (
-            <FeedItem key={item.id} item={item} odd={i % 2 === 1} />
+          {pinnedItems.map((item, i) => (
+            <FeedItem key={item.id} item={item} isNew={i < 3} />
           ))}
         </div>
       )}
 
       {/* Older events — auto-scroll */}
-      {olderItems.length > 0 && (
+      {scrollItems.length > 0 && (
         <>
           <div className="h-[1px] bg-border mx-4" />
           <div className="px-4 py-1">
             <span className="font-mono text-[9px] text-t3 uppercase tracking-wider">earlier</span>
           </div>
           <div ref={scrollRef} className="flex-1 overflow-y-auto">
-            {olderItems.map((item, i) => (
-              <FeedItem key={item.id} item={item} odd={i % 2 === 1} />
+            {scrollItems.map((item) => (
+              <FeedItem key={item.id} item={item} />
             ))}
           </div>
         </>

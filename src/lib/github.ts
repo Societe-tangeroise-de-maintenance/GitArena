@@ -19,6 +19,10 @@ export async function fetchOrgEvents(etag?: string) {
   if (res.status === 304) {
     return { events: [], etag, pollInterval, notModified: true };
   }
+  if (!res.ok) {
+    console.warn(`[GitArena] org events ${res.status}`);
+    return { events: [], etag, pollInterval, notModified: false };
+  }
   const events = await res.json();
   const newEtag = res.headers.get('ETag') || etag;
   return { events: Array.isArray(events) ? events : [], etag: newEtag, pollInterval, notModified: false };
@@ -33,6 +37,9 @@ export async function fetchRepoEvents(repo: string, etag?: string) {
   const pollInterval = parseInt(res.headers.get('X-Poll-Interval') || '10', 10);
   if (res.status === 304) {
     return { events: [], etag, pollInterval, notModified: true };
+  }
+  if (!res.ok) {
+    return { events: [], etag, pollInterval, notModified: false };
   }
   const events = await res.json();
   const newEtag = res.headers.get('ETag') || etag;
@@ -55,6 +62,17 @@ export async function searchIssues(query: string) {
   const res = await fetch(`${BASE}/search/issues?q=${encodeURIComponent(query)}&per_page=100`, {
     headers: headers(),
   });
+  if (!res.ok) return [];
+  const data = await res.json();
+  return data.items || [];
+}
+
+// Search commits (uses search rate limit, not core — survives core rate limit exhaustion)
+export async function searchCommits(query: string) {
+  const res = await fetch(`${BASE}/search/commits?q=${encodeURIComponent(query)}&per_page=100`, {
+    headers: headers(),
+  });
+  if (!res.ok) return [];
   const data = await res.json();
   return data.items || [];
 }
@@ -105,12 +123,16 @@ export async function fetchOrgMembers(): Promise<Array<{ login: string; name: st
   return results;
 }
 
-export function weekStart(): string {
+// Fetch recent issues & PRs from a repo (real-time, no Events API delay)
+export async function fetchRepoRecentActivity(repo: string, since: string) {
+  const url = `${BASE}/repos/${encodeURIComponent(CONFIG.org)}/${encodeURIComponent(repo)}/issues?state=all&sort=updated&direction=desc&since=${encodeURIComponent(since)}&per_page=30`;
+  const res = await fetch(url, { headers: headers() });
+  if (!res.ok) return [];
+  const items = await res.json();
+  return Array.isArray(items) ? items : [];
+}
+
+export function monthStart(): string {
   const now = new Date();
-  const day = now.getDay();
-  const diff = (day + 6) % 7; // Monday = 0
-  const monday = new Date(now);
-  monday.setDate(now.getDate() - diff);
-  monday.setHours(0, 0, 0, 0);
-  return monday.toISOString().split('T')[0];
+  return `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-01`;
 }

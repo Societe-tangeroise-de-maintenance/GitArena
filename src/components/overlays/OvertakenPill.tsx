@@ -1,5 +1,6 @@
 import { motion } from 'framer-motion';
 import { useEffect } from 'react';
+import { sfxOvertaken } from '../../lib/sounds';
 
 interface Props {
   login: string;
@@ -9,6 +10,7 @@ interface Props {
 
 export function OvertakenPill({ login, newRank, onDone }: Props) {
   useEffect(() => {
+    sfxOvertaken();
     const t = setTimeout(onDone, 2000);
     return () => clearTimeout(t);
   }, [onDone]);

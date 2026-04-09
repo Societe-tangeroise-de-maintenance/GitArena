@@ -1,5 +1,6 @@
 import { motion } from 'framer-motion';
 import { useEffect } from 'react';
+import { sfxLevelUp } from '../../lib/sounds';
 
 interface Props {
   login: string;
@@ -10,6 +11,7 @@ interface Props {
 
 export function LevelUpOverlay({ login, level, title, onDone }: Props) {
   useEffect(() => {
+    sfxLevelUp();
     const t = setTimeout(onDone, 2500);
     return () => clearTimeout(t);
   }, [onDone]);

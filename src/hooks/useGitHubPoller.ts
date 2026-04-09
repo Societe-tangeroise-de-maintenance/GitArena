@@ -1,7 +1,7 @@
 import { useEffect, useRef } from 'react';
 import { useStore } from '../store/useStore';
 import { CONFIG } from '../config';
-import { fetchRepoEvents, fetchOrgRepos, fetchOrgEvents, isBot } from '../lib/github';
+import { fetchRepoEvents, fetchOrgRepos, fetchOrgEvents, fetchRepoRecentActivity, isBot, monthStart } from '../lib/github';
 import { XP_VALUES } from '../lib/xp';
 
 export function useGitHubPoller() {
@@ -13,12 +13,25 @@ export function useGitHubPoller() {
   const etagsRef = useRef<Record<string, string | undefined>>({});
   const seenIds = useRef(new Set<string>());
   const reposRef = useRef<string[]>([]);
+  const startTimeRef = useRef(new Date(Date.now() - 2 * 60 * 60 * 1000).toISOString()); // 2h ago
+
+  // Restore seenIds from localStorage to avoid re-processing events after reload
+  useEffect(() => {
+    try {
+      const raw = localStorage.getItem('gitarena_seenIds');
+      if (raw) {
+        const arr = JSON.parse(raw);
+        if (Array.isArray(arr)) arr.forEach((id: string) => seenIds.current.add(id));
+      }
+    } catch { /* ignore */ }
+  }, []);
 
   useEffect(() => {
     if (isDemo) return;
 
     let timer: ReturnType<typeof setTimeout>;
     let stopped = false;
+    const instanceId = Math.random().toString(36).slice(2, 6);
 
     async function init() {
       // Get repos list (use config.repos if set, otherwise fetch all)
@@ -31,13 +44,15 @@ export function useGitHubPoller() {
           reposRef.current = [];
         }
       }
-      console.log('[GitArena] Polling', reposRef.current.length, 'repos:', reposRef.current.slice(0, 5).join(', '), reposRef.current.length > 5 ? '...' : '');
+      if (stopped) { console.log(`[GitArena:${instanceId}] stopped before poll`); return; }
+      console.log(`[GitArena:${instanceId}] Polling ${reposRef.current.length} repos`);
       poll();
     }
 
     async function poll() {
       if (stopped) return;
       const repos = reposRef.current;
+      let eventsProcessed = 0;
 
       // Also try org events
       try {
@@ -48,9 +63,10 @@ export function useGitHubPoller() {
             if (seenIds.current.has(event.id)) continue;
             seenIds.current.add(event.id);
             processEvent(event);
+            eventsProcessed++;
           }
         }
-      } catch { /* ignore */ }
+      } catch (err) { console.warn('[GitArena] org events error:', err); }
 
       // Poll each repo (limit to 20 most recently pushed to save rate limit)
       const reposToCheck = repos.slice(0, 20);
@@ -64,19 +80,96 @@ export function useGitHubPoller() {
               if (seenIds.current.has(event.id)) continue;
               seenIds.current.add(event.id);
               processEvent(event);
+              eventsProcessed++;
             }
           }
-        } catch { /* ignore individual repo errors */ }
+        } catch (err) { console.warn(`[GitArena] ${repo} events error:`, err); }
       }
 
-      // Keep seen set manageable
+      // Supplementary: fetch recent issues/PRs directly (real-time, no Events API delay)
+      for (const repo of reposToCheck) {
+        if (stopped) return;
+        try {
+          const items = await fetchRepoRecentActivity(repo, startTimeRef.current);
+          for (const item of items) {
+            processIssueOrPR(item, repo);
+          }
+        } catch { /* ignore */ }
+      }
+
+      console.log(`[GitArena:${instanceId}] Poll done: ${eventsProcessed} events processed, seenIds=${seenIds.current.size}`);
+
+      // Keep seen set manageable & persist
       if (seenIds.current.size > 2000) {
         const arr = [...seenIds.current];
         seenIds.current = new Set(arr.slice(-1000));
       }
+      try {
+        localStorage.setItem('gitarena_seenIds', JSON.stringify([...seenIds.current]));
+      } catch { /* ignore */ }
+
+      // Refresh startTime so long-running sessions keep getting recent data
+      startTimeRef.current = new Date(Date.now() - 2 * 60 * 60 * 1000).toISOString();
 
       if (!stopped) {
         timer = setTimeout(poll, CONFIG.pollInterval * 1000);
+      }
+    }
+
+    function processIssueOrPR(item: Record<string, unknown>, repo: string) {
+      const user = item.user as Record<string, string> | undefined;
+      const login = user?.login;
+      const avatarUrl = user?.avatar_url || '';
+      if (!login || isBot(login)) return;
+
+      const isPR = !!item.pull_request;
+      const state = item.state as string;
+      const title = (item.title as string) || '';
+      const createdAt = item.created_at as string;
+      const closedAt = item.closed_at as string | null;
+      const merged = isPR && !!(item.pull_request as Record<string, unknown>)?.merged_at;
+
+      // Skip items from before current month
+      const ms = monthStart();
+      const latestTime = closedAt || createdAt;
+      if (latestTime && latestTime < ms) return;
+
+      ensureMember(login, avatarUrl);
+
+      if (isPR) {
+        // PR opened
+        const openKey = `rt-pr-open-${repo}-${item.number}`;
+        if (!seenIds.current.has(openKey)) {
+          seenIds.current.add(openKey);
+          addXp(login, XP_VALUES.prOpened, 'pr-opened', repo, 'opened PR', title, createdAt);
+          incrementStat(login, 'weeklyPRsOpened');
+        }
+        // PR merged
+        if (merged && closedAt) {
+          const mergeKey = `rt-pr-merge-${repo}-${item.number}`;
+          if (!seenIds.current.has(mergeKey)) {
+            seenIds.current.add(mergeKey);
+            addXp(login, XP_VALUES.prMerged, 'pr-merged', repo, 'merged PR', title, closedAt);
+            incrementStat(login, 'weeklyPRsMerged');
+          }
+        }
+      } else {
+        // Issue opened
+        const openKey = `rt-issue-open-${repo}-${item.number}`;
+        if (!seenIds.current.has(openKey)) {
+          seenIds.current.add(openKey);
+          addXp(login, XP_VALUES.issueOpened, 'issue-opened', repo, 'opened issue', title, createdAt);
+        }
+        // Issue closed
+        if (state === 'closed' && closedAt) {
+          const closeKey = `rt-issue-close-${repo}-${item.number}`;
+          if (!seenIds.current.has(closeKey)) {
+            seenIds.current.add(closeKey);
+            addXp(login, XP_VALUES.issueClosed, 'issue', repo, 'closed issue', title, closedAt);
+            incrementStat(login, 'weeklyIssuesClosed');
+            incrementStat(login, 'dailyIssuesClosed');
+          }
+        }
       }
     }
 
@@ -91,6 +184,9 @@ export function useGitHubPoller() {
 
       if (!actor || isBot(actor)) return;
 
+      // Skip events from before current month
+      if (eventTime && eventTime < monthStart()) return;
+
       // Register member with avatar
       ensureMember(actor, avatarUrl);
 
@@ -98,9 +194,11 @@ export function useGitHubPoller() {
         case 'PushEvent': {
           const commits = (payload.commits as Array<Record<string, string>>) || [];
           const count = commits.length;
+          // Cap XP at 10 commits per push to prevent inflated scores from large pushes
+          const cappedCount = Math.min(count, 10);
           if (count > 0) {
             const msg = commits[0]?.message?.split('\n')[0] || 'pushed code';
-            addXp(actor, XP_VALUES.commit * count, 'commit', repo, `pushed ${count} commit${count > 1 ? 's' : ''}`, msg, eventTime);
+            addXp(actor, XP_VALUES.commit * cappedCount, 'commit', repo, `pushed ${count} commit${count > 1 ? 's' : ''}`, msg, eventTime);
             incrementStat(actor, 'weeklyCommits', count);
             incrementStat(actor, 'dailyCommits', count);
             bumpStreak(actor);
@@ -124,25 +222,54 @@ export function useGitHubPoller() {
           const action = (payload.action as string);
           const pr = payload.pull_request as Record<string, unknown>;
           const title = (pr?.title as string) || 'PR';
+          const prNum = pr?.number as number;
           if (action === 'opened') {
-            addXp(actor, XP_VALUES.prOpened, 'pr-opened', repo, 'opened PR', title, eventTime);
-            incrementStat(actor, 'weeklyPRsOpened');
+            const key = `rt-pr-open-${repo}-${prNum}`;
+            if (!seenIds.current.has(key)) {
+              seenIds.current.add(key);
+              addXp(actor, XP_VALUES.prOpened, 'pr-opened', repo, 'opened PR', title, eventTime);
+              incrementStat(actor, 'weeklyPRsOpened');
+            }
           } else if (action === 'closed' && pr?.merged) {
-            addXp(actor, XP_VALUES.prMerged, 'pr-merged', repo, 'merged PR', title, eventTime);
-            incrementStat(actor, 'weeklyPRsMerged');
+            const key = `rt-pr-merge-${repo}-${prNum}`;
+            if (!seenIds.current.has(key)) {
+              seenIds.current.add(key);
+              addXp(actor, XP_VALUES.prMerged, 'pr-merged', repo, 'merged PR', title, eventTime);
+              incrementStat(actor, 'weeklyPRsMerged');
+            }
           }
           break;
         }
         case 'PullRequestReviewEvent': {
-          addXp(actor, XP_VALUES.prReviewed, 'review', repo, 'reviewed PR', undefined, eventTime);
-          incrementStat(actor, 'weeklyPRsReviewed');
+          const reviewPr = payload.pull_request as Record<string, unknown>;
+          const reviewId = (payload.review as Record<string, unknown>)?.id || event.id;
+          const key = `rt-review-${repo}-${reviewId}`;
+          if (!seenIds.current.has(key)) {
+            seenIds.current.add(key);
+            addXp(actor, XP_VALUES.prReviewed, 'review', repo, 'reviewed PR', (reviewPr?.title as string) || '', eventTime);
+            incrementStat(actor, 'weeklyPRsReviewed');
+          }
           break;
         }
         case 'IssuesEvent': {
-          if ((payload.action as string) === 'closed') {
-            addXp(actor, XP_VALUES.issueClosed, 'issue', repo, 'closed issue', undefined, eventTime);
-            incrementStat(actor, 'weeklyIssuesClosed');
-            incrementStat(actor, 'dailyIssuesClosed');
+          const action = payload.action as string;
+          const issue = payload.issue as Record<string, unknown>;
+          const title = (issue?.title as string) || '';
+          const issueNum = issue?.number as number;
+          if (action === 'opened') {
+            const key = `rt-issue-open-${repo}-${issueNum}`;
+            if (!seenIds.current.has(key)) {
+              seenIds.current.add(key);
+              addXp(actor, XP_VALUES.issueOpened, 'issue-opened', repo, 'opened issue', title, eventTime);
+            }
+          } else if (action === 'closed') {
+            const key = `rt-issue-close-${repo}-${issueNum}`;
+            if (!seenIds.current.has(key)) {
+              seenIds.current.add(key);
+              addXp(actor, XP_VALUES.issueClosed, 'issue', repo, 'closed issue', title, eventTime);
+              incrementStat(actor, 'weeklyIssuesClosed');
+              incrementStat(actor, 'dailyIssuesClosed');
+            }
           }
           break;
         }
