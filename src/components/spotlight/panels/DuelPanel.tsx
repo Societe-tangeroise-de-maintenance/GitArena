@@ -24,10 +24,10 @@ export function DuelPanel() {
       <div className="flex items-center gap-3 w-[220px]">
         <div className="relative">
           {m1?.avatarUrl ? (
-            <img src={m1.avatarUrl} alt={m1.name} className="w-[48px] h-[48px] rounded-full object-cover avatar-ring-gold" />
+            <img src={m1.avatarUrl} alt={m1.name} className="w-[56px] h-[56px] rounded-full object-cover avatar-ring-gold" />
           ) : (
             <div
-              className="w-[48px] h-[48px] rounded-full flex items-center justify-center font-mono text-[16px] font-medium text-bg avatar-ring-gold"
+              className="w-[56px] h-[56px] rounded-full flex items-center justify-center font-mono text-[18px] font-medium text-bg avatar-ring-gold"
               style={{ backgroundColor: m1?.color || '#444' }}
             >
               {(m1?.name || first).slice(0, 2).toUpperCase()}
@@ -35,15 +35,15 @@ export function DuelPanel() {
           )}
         </div>
         <div>
-          <div className="text-[16px] font-medium text-t1">{m1?.name || first}</div>
-          <div className="font-mono text-[20px] text-gold font-medium">{s1.weeklyXp.toLocaleString()}</div>
+          <div className="text-[24px] font-medium text-t1">{m1?.name || first}</div>
+          <div className="font-mono text-[32px] text-gold font-medium">{s1.weeklyXp.toLocaleString()}</div>
         </div>
       </div>
 
       {/* Bar */}
       <div className="flex-1 flex flex-col items-center gap-2">
-        <div className="font-mono text-[10px] text-t3 uppercase tracking-[3px]">⚔️ duel</div>
-        <div className="w-full h-[10px] bg-muted rounded-full overflow-hidden flex">
+        <div className="font-mono text-[13px] text-t3 uppercase tracking-[3px]">⚔️ duel</div>
+        <div className="w-full h-[12px] bg-muted rounded-full overflow-hidden flex">
           <div
             className="h-full rounded-l-full transition-all duration-700"
             style={{ width: `${pct1}%`, backgroundColor: m1?.color || '#3b82f6' }}
@@ -54,24 +54,24 @@ export function DuelPanel() {
           />
         </div>
         <div className="flex justify-between w-full">
-          <span className="font-mono text-[12px] text-t1 font-medium">{pct1}%</span>
-          <span className="font-mono text-[10px] text-t3 vs-pulse">vs</span>
-          <span className="font-mono text-[12px] text-t1 font-medium">{pct2}%</span>
+          <span className="font-mono text-[14px] text-t1 font-medium">{pct1}%</span>
+          <span className="font-mono text-[13px] text-t3 vs-pulse">vs</span>
+          <span className="font-mono text-[14px] text-t1 font-medium">{pct2}%</span>
         </div>
       </div>
 
       {/* Player 2 */}
       <div className="flex items-center gap-3 w-[220px] justify-end text-right">
         <div>
-          <div className="text-[16px] font-medium text-t1">{m2?.name || second}</div>
-          <div className="font-mono text-[20px] text-silver font-medium">{s2.weeklyXp.toLocaleString()}</div>
+          <div className="text-[24px] font-medium text-t1">{m2?.name || second}</div>
+          <div className="font-mono text-[32px] text-silver font-medium">{s2.weeklyXp.toLocaleString()}</div>
         </div>
         <div className="relative">
           {m2?.avatarUrl ? (
-            <img src={m2.avatarUrl} alt={m2.name} className="w-[48px] h-[48px] rounded-full object-cover avatar-ring-silver" />
+            <img src={m2.avatarUrl} alt={m2.name} className="w-[56px] h-[56px] rounded-full object-cover avatar-ring-silver" />
           ) : (
             <div
-              className="w-[48px] h-[48px] rounded-full flex items-center justify-center font-mono text-[16px] font-medium text-bg avatar-ring-silver"
+              className="w-[56px] h-[56px] rounded-full flex items-center justify-center font-mono text-[18px] font-medium text-bg avatar-ring-silver"
               style={{ backgroundColor: m2?.color || '#a78bfa' }}
             >
               {(m2?.name || second).slice(0, 2).toUpperCase()}

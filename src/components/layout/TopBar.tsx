@@ -43,17 +43,17 @@ export function TopBar() {
       {/* Left: Logo + org */}
       <div className="flex items-center gap-4">
         <div className="flex items-center gap-2">
-          <span className="text-[20px]">⚔️</span>
-          <span className="font-mono text-[18px] font-medium tracking-tight neon-text-cyan">
+          <span className="text-[22px]">⚔️</span>
+          <span className="font-mono text-[20px] font-medium tracking-tight neon-text-cyan">
             GitArena
           </span>
         </div>
         <div className="h-4 w-[1px] bg-border" />
-        <span className="font-mono text-[11px] text-t3">
+        <span className="font-mono text-[13px] text-t3">
           {CONFIG.org}
         </span>
         {isDemo && (
-          <span className="font-mono text-[10px] text-amber bg-amber/10 px-2 py-0.5 rounded">
+          <span className="font-mono text-[13px] text-amber bg-amber/10 px-2 py-0.5 rounded">
             DEMO
           </span>
         )}
@@ -63,20 +63,20 @@ export function TopBar() {
       <div className="flex items-center gap-4">
         {goal && (
           <div className="flex items-center gap-3 bg-raised/50 rounded-lg px-4 py-1.5">
-            <span className="text-[14px]">👾</span>
-            <span className="font-mono text-[10px] text-red uppercase tracking-wider font-medium neon-text-red">
+            <span className="text-[16px]">👾</span>
+            <span className="font-mono text-[13px] text-red uppercase tracking-wider font-medium neon-text-red">
               boss
             </span>
-            <div className="w-[180px] h-[8px] bg-muted rounded-full overflow-hidden relative">
+            <div className="w-[200px] h-[10px] bg-muted rounded-full overflow-hidden relative">
               <div
                 className={`h-full gradient-bar-boss rounded-full transition-all duration-700 ${bossPercent > 80 ? 'animate-pulse-glow' : ''}`}
                 style={{ width: `${bossPercent}%` }}
               />
             </div>
-            <span className="font-mono text-[12px] text-t1 font-medium">
+            <span className="font-mono text-[14px] text-t1 font-medium">
               {bossPercent}%
             </span>
-            <span className="font-mono text-[10px] text-t3">
+            <span className="font-mono text-[13px] text-t3">
               {goal.label}
             </span>
           </div>
@@ -89,8 +89,8 @@ export function TopBar() {
         <StatPill icon="⚡" label="xp" value={totalXp} glow />
         <StatPill icon="📦" label="commits" value={totalCommits} />
         <div className={`flex items-center gap-1.5 ${clockColor}`}>
-          <span className="text-[12px]">⏱</span>
-          <span className="font-mono text-[11px] font-medium">
+          <span className="text-[14px]">⏱</span>
+          <span className="font-mono text-[13px] font-medium">
             {minutesAgo !== null ? `${minutesAgo}m ago` : '—'}
           </span>
         </div>
@@ -102,9 +102,9 @@ export function TopBar() {
 function StatPill({ icon, label, value, glow }: { icon: string; label: string; value: number; glow?: boolean }) {
   return (
     <div className={`flex items-center gap-1.5 ${glow ? 'glow-green rounded-md px-2 py-0.5' : ''}`}>
-      <span className="text-[11px]">{icon}</span>
-      <span className="font-mono text-[10px] text-t3">{label}</span>
-      <span className={`font-mono text-[14px] font-medium ${glow ? 'neon-text-green' : 'text-t1'}`}>{value.toLocaleString()}</span>
+      <span className="text-[14px]">{icon}</span>
+      <span className="font-mono text-[13px] text-t3">{label}</span>
+      <span className={`font-mono text-[16px] font-medium ${glow ? 'neon-text-green' : 'text-t1'}`}>{value.toLocaleString()}</span>
     </div>
   );
 }

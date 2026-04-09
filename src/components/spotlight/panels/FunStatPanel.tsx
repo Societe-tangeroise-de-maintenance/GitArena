@@ -40,9 +40,9 @@ export function FunStatPanel() {
 
   return (
     <div className="flex flex-col items-center justify-center h-full gap-3">
-      <span className="text-[32px]">{stat.icon}</span>
-      <span className="font-mono text-[52px] text-t1 font-medium glow-blue rounded-lg px-4">{value.toLocaleString()}</span>
-      <span className="font-mono text-[16px] text-t3">{stat.label}</span>
+      <span className="text-[36px]">{stat.icon}</span>
+      <span className="font-mono text-[56px] text-t1 font-medium glow-blue rounded-lg px-4">{value.toLocaleString()}</span>
+      <span className="font-mono text-[18px] text-t3">{stat.label}</span>
     </div>
   );
 }

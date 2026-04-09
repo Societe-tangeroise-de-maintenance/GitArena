@@ -10,6 +10,7 @@ import { BossVictoryOverlay } from './components/overlays/BossVictoryOverlay';
 import { OvertakenPill } from './components/overlays/OvertakenPill';
 import { AchievementOverlay } from './components/overlays/AchievementOverlay';
 import { Particles } from './components/effects/Particles';
+import { EventFlash } from './components/effects/EventFlash';
 import { useGitHubPoller } from './hooks/useGitHubPoller';
 import { useFullSync } from './hooks/useFullSync';
 import { useDemoMode } from './hooks/useDemoMode';
@@ -77,12 +78,14 @@ export default function App() {
     <div
       className="w-full h-full grid relative"
       style={{
-        gridTemplateColumns: '360px 1fr 300px',
-        gridTemplateRows: '56px 1fr 220px',
+        gridTemplateColumns: '420px 1fr 340px',
+        gridTemplateRows: '56px 1fr 280px',
       }}
     >
       {/* Ambient particles */}
       <Particles />
+      {/* Event flash overlay */}
+      <EventFlash />
 
       {/* Row 1: TopBar */}
       <div className="col-span-3 neon-border-b relative z-10">

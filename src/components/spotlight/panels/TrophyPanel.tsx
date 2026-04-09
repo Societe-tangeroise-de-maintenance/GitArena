@@ -16,7 +16,7 @@ export function TrophyPanel() {
     return (
       <div className="flex items-center justify-center h-full gap-2">
         <span className="text-[24px]">🏆</span>
-        <span className="font-mono text-[12px] text-t3">no trophies yet</span>
+        <span className="font-mono text-[14px] text-t3">no trophies yet</span>
       </div>
     );
   }
@@ -25,7 +25,7 @@ export function TrophyPanel() {
     <div className="flex items-center h-full px-8 gap-4 overflow-x-auto">
       <div className="shrink-0 flex flex-col items-center gap-1">
         <span className="text-[24px]">🏆</span>
-        <span className="font-mono text-[10px] text-gold uppercase tracking-wider font-medium">trophies</span>
+        <span className="font-mono text-[13px] text-gold uppercase tracking-wider font-medium">trophies</span>
       </div>
       <div className="flex gap-4 flex-wrap">
         {all.slice(-12).map((entry, i) => {
@@ -35,14 +35,14 @@ export function TrophyPanel() {
           const glow = badge.rarity === 'legendary' ? 'glow-gold' : badge.rarity === 'rare' ? 'glow-purple' : '';
           return (
             <div key={i} className={`flex flex-col items-center gap-1 p-1.5 rounded-lg ${glow}`}>
-              <span className="text-[24px]">{badge.icon}</span>
-              <span className="font-mono text-[9px] text-t2 truncate max-w-[60px]">
+              <span className="text-[28px]">{badge.icon}</span>
+              <span className="font-mono text-[13px] text-t2 truncate max-w-[70px]">
                 {badge.name}
               </span>
               {member?.avatarUrl ? (
-                <img src={member.avatarUrl} alt={member.name} className="w-[16px] h-[16px] rounded-full" />
+                <img src={member.avatarUrl} alt={member.name} className="w-[20px] h-[20px] rounded-full" />
               ) : (
-                <span className="font-mono text-[9px] text-t3 truncate max-w-[60px]">
+                <span className="font-mono text-[13px] text-t3 truncate max-w-[70px]">
                   {member?.name || entry.login}
                 </span>
               )}

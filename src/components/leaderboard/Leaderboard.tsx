@@ -42,11 +42,11 @@ export function Leaderboard() {
   return (
     <div className="h-full flex flex-col">
       <div className="px-4 py-3 flex items-center gap-2">
-        <span className="text-[14px]">🏆</span>
-        <span className="font-mono text-[11px] text-t3 uppercase tracking-wider">
+        <span className="text-[16px]">🏆</span>
+        <span className="font-mono text-[13px] text-t3 uppercase tracking-wider">
           leaderboard
         </span>
-        <span className="font-mono text-[10px] text-t3 ml-auto">{ranked.length} players</span>
+        <span className="font-mono text-[13px] text-t3 ml-auto">{ranked.length} players</span>
       </div>
 
       {/* Pinned top 3 */}

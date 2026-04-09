@@ -1,6 +1,7 @@
 // Web Audio API synthesized sound effects — no external files needed.
 
 let ctx: AudioContext | null = null;
+const MASTER_VOLUME = 0.4;
 
 function getCtx(): AudioContext {
   if (!ctx) ctx = new AudioContext();
@@ -14,7 +15,7 @@ function playTone(freq: number, duration: number, type: OscillatorType = 'sine',
   osc.type = type;
   osc.frequency.value = freq;
   osc.detune.value = detune;
-  gain.gain.setValueAtTime(vol, c.currentTime);
+  gain.gain.setValueAtTime(vol * MASTER_VOLUME, c.currentTime);
   gain.gain.exponentialRampToValueAtTime(0.001, c.currentTime + duration);
   osc.connect(gain).connect(c.destination);
   osc.start(c.currentTime);
@@ -25,6 +26,49 @@ function playTone(freq: number, duration: number, type: OscillatorType = 'sine',
 export function sfxXp() {
   playTone(880, 0.12, 'sine', 0.08);
   setTimeout(() => playTone(1320, 0.1, 'sine', 0.06), 80);
+}
+
+/** Commit push — soft mechanical click */
+export function sfxCommit() {
+  playTone(600, 0.08, 'square', 0.04);
+  setTimeout(() => playTone(900, 0.06, 'sine', 0.05), 50);
+}
+
+/** PR opened — ascending sweep */
+export function sfxPROpened() {
+  playTone(440, 0.15, 'triangle', 0.08);
+  setTimeout(() => playTone(660, 0.12, 'triangle', 0.08), 100);
+  setTimeout(() => playTone(880, 0.15, 'sine', 0.06), 200);
+}
+
+/** PR merged — satisfying chord resolve */
+export function sfxPRMerged() {
+  playTone(523, 0.2, 'triangle', 0.10);
+  playTone(659, 0.2, 'triangle', 0.08);
+  setTimeout(() => {
+    playTone(784, 0.25, 'sine', 0.10);
+    playTone(1047, 0.25, 'sine', 0.06);
+  }, 150);
+}
+
+/** Issue closed — quick victory ping */
+export function sfxIssueClosed() {
+  playTone(784, 0.10, 'sine', 0.08);
+  setTimeout(() => playTone(1047, 0.15, 'sine', 0.07), 80);
+}
+
+/** Review submitted — double tap */
+export function sfxReview() {
+  playTone(700, 0.08, 'triangle', 0.06);
+  setTimeout(() => playTone(1000, 0.08, 'triangle', 0.06), 100);
+}
+
+/** Streak bonus — fire crackle */
+export function sfxStreak() {
+  playTone(200, 0.05, 'sawtooth', 0.04);
+  setTimeout(() => playTone(400, 0.08, 'sawtooth', 0.06), 40);
+  setTimeout(() => playTone(800, 0.12, 'triangle', 0.08), 80);
+  setTimeout(() => playTone(1200, 0.15, 'sine', 0.06), 140);
 }
 
 /** Ascending triad for level-up */

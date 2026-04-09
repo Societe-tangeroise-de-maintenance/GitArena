@@ -52,10 +52,10 @@ export function LeaderboardRow({ login, rank, color, name, avatarUrl }: Props) {
 
   const isHero = rank === 1;
   const isTop3 = rank <= 3;
-  const rowHeight = isHero ? 'h-[94px]' : isTop3 ? 'h-[82px]' : 'h-[68px]';
-  const avatarSize = isHero ? 'w-[44px] h-[44px]' : isTop3 ? 'w-[40px] h-[40px]' : 'w-[34px] h-[34px]';
-  const avatarText = isHero ? 'text-[14px]' : isTop3 ? 'text-[13px]' : 'text-[11px]';
-  const nameSize = isHero ? 'text-[16px]' : 'text-[14px]';
+  const rowHeight = isHero ? 'h-[100px]' : isTop3 ? 'h-[88px]' : 'h-[74px]';
+  const avatarSize = isHero ? 'w-[48px] h-[48px]' : isTop3 ? 'w-[44px] h-[44px]' : 'w-[38px] h-[38px]';
+  const avatarText = isHero ? 'text-[15px]' : isTop3 ? 'text-[14px]' : 'text-[13px]';
+  const nameSize = isHero ? 'text-[18px]' : 'text-[16px]';
 
   const rankBg = rank === 1 ? 'rank-1-bg' : rank === 2 ? 'rank-2-bg' : rank === 3 ? 'rank-3-bg' : '';
   const avatarRing = rank === 1 ? 'avatar-ring-gold' : rank === 2 ? 'avatar-ring-silver' : rank === 3 ? 'avatar-ring-bronze' : '';
@@ -70,16 +70,16 @@ export function LeaderboardRow({ login, rank, color, name, avatarUrl }: Props) {
       transition={{ duration: 0.8 }}
     >
       {/* Rank + Delta */}
-      <div className="w-[36px] flex flex-col items-center shrink-0">
+      <div className="w-[40px] flex flex-col items-center shrink-0">
         {rankIcon ? (
-          <span className={`${isHero ? 'text-[20px]' : 'text-[16px]'}`}>{rankIcon}</span>
+          <span className={`${isHero ? 'text-[22px]' : 'text-[18px]'}`}>{rankIcon}</span>
         ) : (
-          <span className={`font-mono text-[14px] font-medium ${rankColor}`}>
+          <span className={`font-mono text-[16px] font-medium ${rankColor}`}>
             #{rank}
           </span>
         )}
         {rankDelta !== 0 && (
-          <span className={`font-mono text-[9px] font-medium ${rankDelta > 0 ? 'text-green neon-text-green' : 'text-red'}`}>
+          <span className={`font-mono text-[13px] font-medium ${rankDelta > 0 ? 'text-green neon-text-green' : 'text-red'}`}>
             {rankDelta > 0 ? `▲${rankDelta}` : `▼${Math.abs(rankDelta)}`}
           </span>
         )}
@@ -107,7 +107,7 @@ export function LeaderboardRow({ login, rank, color, name, avatarUrl }: Props) {
       <div className="flex-1 min-w-0">
         <span className={`${nameSize} font-medium truncate block ${rank === 1 ? 'text-gold neon-text-gold' : 'text-t1'}`}>{name}</span>
         <div className="flex items-center gap-2 mt-1">
-          <span className={`font-mono text-[9px] rounded px-1.5 py-[1px] uppercase tracking-wider shrink-0 font-medium ${levelPill}`}>
+          <span className={`font-mono text-[13px] rounded px-1.5 py-[1px] uppercase tracking-wider shrink-0 font-medium ${levelPill}`}>
             {level.title}
           </span>
           {/* XP progress bar */}
@@ -122,23 +122,23 @@ export function LeaderboardRow({ login, rank, color, name, avatarUrl }: Props) {
 
       {/* Streak */}
       {s.streak > 0 && (
-        <span className="font-mono text-[11px] text-amber shrink-0 animate-fire-pulse neon-text-gold">
+        <span className="font-mono text-[14px] text-amber shrink-0 animate-fire-pulse neon-text-gold">
           🔥 {s.streak}d
         </span>
       )}
 
       {/* XP */}
-      <div className="flex items-baseline gap-1 shrink-0 relative min-w-[70px] justify-end">
-        <span className={`font-mono ${isHero ? 'text-[17px]' : 'text-[15px]'} font-medium text-t1`}>
+      <div className="flex items-baseline gap-1 shrink-0 relative min-w-[80px] justify-end">
+        <span className={`font-mono ${isHero ? 'text-[20px]' : 'text-[17px]'} font-medium text-t1`}>
           {s.weeklyXp.toLocaleString()}
         </span>
-        <span className="font-mono text-[9px] text-green neon-text-green">xp</span>
+        <span className="font-mono text-[13px] text-green neon-text-green">xp</span>
 
         {/* Float-up animation */}
         <AnimatePresence>
           {xpFlash && (
             <motion.span
-              className="absolute -top-3 right-0 font-mono text-[12px] text-green pointer-events-none font-medium neon-text-green"
+              className="absolute -top-3 right-0 font-mono text-[14px] text-green pointer-events-none font-medium neon-text-green"
               initial={{ opacity: 1, y: 0 }}
               animate={{ opacity: 0, y: -20 }}
               exit={{ opacity: 0 }}

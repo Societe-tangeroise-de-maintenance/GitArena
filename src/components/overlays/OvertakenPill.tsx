@@ -24,9 +24,9 @@ export function OvertakenPill({ login, newRank, onDone }: Props) {
       transition={{ type: 'spring', damping: 20 }}
     >
       <div className="bg-raised border border-green/30 rounded-full px-5 py-2 flex items-center gap-3 glow-green">
-        <span className="font-mono text-[11px] text-green font-medium">⬆️</span>
-        <span className="text-[13px] font-medium text-t1">{login}</span>
-        <span className="font-mono text-[11px] text-green font-medium">
+        <span className="font-mono text-[13px] text-green font-medium">⬆️</span>
+        <span className="text-[15px] font-medium text-t1">{login}</span>
+        <span className="font-mono text-[13px] text-green font-medium">
           moved to #{newRank}
         </span>
       </div>

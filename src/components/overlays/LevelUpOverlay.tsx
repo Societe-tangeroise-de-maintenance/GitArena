@@ -30,12 +30,12 @@ export function LevelUpOverlay({ login, level, title, onDone }: Props) {
         transition={{ type: 'spring', duration: 0.6 }}
       >
         <span className="text-[32px] animate-pulse-glow">⭐</span>
-        <span className="font-mono text-[10px] text-gold uppercase tracking-[4px] font-medium">
+        <span className="font-mono text-[13px] text-gold uppercase tracking-[4px] font-medium">
           level up
         </span>
-        <span className="text-[28px] font-medium shimmer-text">{login}</span>
-        <span className="font-mono text-[48px] text-gold font-medium">LEVEL {level}</span>
-        <span className="font-mono text-[16px] text-t2">{title}</span>
+        <span className="text-[32px] font-medium shimmer-text">{login}</span>
+        <span className="font-mono text-[52px] text-gold font-medium">LEVEL {level}</span>
+        <span className="font-mono text-[18px] text-t2">{title}</span>
       </motion.div>
     </motion.div>
   );

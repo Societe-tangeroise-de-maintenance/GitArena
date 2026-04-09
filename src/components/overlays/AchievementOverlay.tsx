@@ -103,7 +103,7 @@ export function AchievementOverlay({ login, badgeId, onDone }: Props) {
               {(member?.name || login).slice(0, 2).toUpperCase()}
             </div>
           )}
-          <span className="text-[18px] font-medium text-t1">{member?.name || login}</span>
+          <span className="text-[20px] font-medium text-t1">{member?.name || login}</span>
         </motion.div>
 
         {/* Badge icon — spring scale */}
@@ -118,7 +118,7 @@ export function AchievementOverlay({ login, badgeId, onDone }: Props) {
 
         {/* Badge name — typewriter reveal */}
         <motion.div
-          className={`mt-6 font-mono text-[10px] uppercase tracking-[4px] font-medium ${config.textGlow}`}
+          className={`mt-6 font-mono text-[13px] uppercase tracking-[4px] font-medium ${config.textGlow}`}
           style={{ color: rarity === 'legendary' ? '#FFD700' : rarity === 'rare' ? '#a78bfa' : '#06b6d4' }}
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
@@ -128,7 +128,7 @@ export function AchievementOverlay({ login, badgeId, onDone }: Props) {
         </motion.div>
 
         <motion.div
-          className={`mt-2 text-[28px] font-medium ${rarity === 'legendary' ? 'text-gold neon-text-gold' : 'text-t1'}`}
+          className={`mt-2 text-[32px] font-medium ${rarity === 'legendary' ? 'text-gold neon-text-gold' : 'text-t1'}`}
           initial={{ opacity: 0, y: 10 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ delay: 0.7, duration: 0.4 }}
@@ -137,7 +137,7 @@ export function AchievementOverlay({ login, badgeId, onDone }: Props) {
         </motion.div>
 
         <motion.div
-          className="mt-1 font-mono text-[13px] text-t2"
+          className="mt-1 font-mono text-[14px] text-t2"
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
           transition={{ delay: 0.9, duration: 0.4 }}

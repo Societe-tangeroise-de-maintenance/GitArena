@@ -30,11 +30,11 @@ export function SpotlightNav({ current, onSelect }: Props) {
                 : 'w-[6px] h-[6px] bg-t3 group-hover:bg-t2'
             }`}
           />
-          <span className={`text-[11px] ${current === i ? '' : 'opacity-60 group-hover:opacity-80'}`}>
+          <span className={`text-[14px] ${current === i ? '' : 'opacity-60 group-hover:opacity-80'}`}>
             {mode.icon}
           </span>
           <span
-            className={`font-mono text-[10px] transition-colors ${
+            className={`font-mono text-[13px] transition-colors ${
               current === i ? 'text-t1' : 'text-t3 group-hover:text-t2'
             }`}
           >

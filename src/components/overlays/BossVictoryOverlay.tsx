@@ -65,13 +65,13 @@ export function BossVictoryOverlay({ onDone }: Props) {
         transition={{ type: 'spring', duration: 0.6 }}
       >
         <span className="text-[48px] animate-pulse-glow">👾</span>
-        <span className="font-mono text-[10px] text-green uppercase tracking-[4px] font-medium">
+        <span className="font-mono text-[13px] text-green uppercase tracking-[4px] font-medium">
           boss defeated
         </span>
-        <span className="text-[28px] font-medium shimmer-text">
+        <span className="text-[32px] font-medium shimmer-text">
           Team Victory!
         </span>
-        <span className="font-mono text-[14px] text-t2">
+        <span className="font-mono text-[16px] text-t2">
           All goals completed this month ✅
         </span>
       </motion.div>

@@ -21,17 +21,17 @@ export function VelocityPanel() {
   return (
     <div className="flex items-center h-full px-8 gap-6">
       <div className="shrink-0 flex flex-col items-center gap-1">
-        <span className="text-[20px]">📈</span>
-        <span className="font-mono text-[10px] text-cyan uppercase tracking-wider font-medium">velocity</span>
+        <span className="text-[24px]">📈</span>
+        <span className="font-mono text-[13px] text-cyan uppercase tracking-wider font-medium">velocity</span>
       </div>
-      <div className="flex-1 h-[160px]">
+      <div className="flex-1 h-[180px]">
         <ResponsiveContainer width="100%" height="100%">
           <BarChart data={data} barCategoryGap="20%">
             <XAxis
               dataKey="name"
               axisLine={false}
               tickLine={false}
-              tick={{ fill: '#444', fontSize: 10, fontFamily: 'Geist Mono Variable' }}
+              tick={{ fill: '#444', fontSize: 13, fontFamily: 'Geist Mono Variable' }}
             />
             <YAxis hide />
             <Bar dataKey="commits" radius={[3, 3, 0, 0]}>

@@ -45,14 +45,14 @@ export function ActivityFeed() {
   return (
     <div className="h-full flex flex-col">
       <div className="px-4 py-3 flex items-center gap-2">
-        <span className="text-[14px]">📡</span>
-        <span className="font-mono text-[11px] text-t3 uppercase tracking-wider neon-text-cyan">
+        <span className="text-[16px]">📡</span>
+        <span className="font-mono text-[13px] text-t3 uppercase tracking-wider neon-text-cyan">
           live activity
         </span>
         {feed.length > 0 && (
           <span className="ml-auto flex items-center gap-1">
             <span className="w-[6px] h-[6px] rounded-full bg-green animate-pulse" />
-            <span className="font-mono text-[10px] text-green">live</span>
+            <span className="font-mono text-[13px] text-green">live</span>
           </span>
         )}
       </div>
@@ -61,7 +61,7 @@ export function ActivityFeed() {
       {pinnedItems.length > 0 && (
         <div className="shrink-0 max-h-[60%] overflow-hidden">
           <div className="px-4 py-1">
-            <span className="font-mono text-[9px] text-green uppercase tracking-wider neon-text-green">latest</span>
+            <span className="font-mono text-[13px] text-green uppercase tracking-wider neon-text-green">latest</span>
           </div>
           {pinnedItems.map((item, i) => (
             <FeedItem key={item.id} item={item} isNew={i < 3} />
@@ -74,7 +74,7 @@ export function ActivityFeed() {
         <>
           <div className="h-[1px] bg-border mx-4" />
           <div className="px-4 py-1">
-            <span className="font-mono text-[9px] text-t3 uppercase tracking-wider">earlier</span>
+            <span className="font-mono text-[13px] text-t3 uppercase tracking-wider">earlier</span>
           </div>
           <div ref={scrollRef} className="flex-1 overflow-y-auto">
             {scrollItems.map((item) => (
@@ -87,7 +87,7 @@ export function ActivityFeed() {
       {feed.length === 0 && (
         <div className="flex flex-col items-center justify-center h-32 gap-2">
           <span className="text-[24px]">📡</span>
-          <span className="text-t3 font-mono text-[12px]">waiting for events…</span>
+          <span className="text-t3 font-mono text-[14px]">waiting for events…</span>
         </div>
       )}
     </div>

@@ -20,10 +20,10 @@ export function MVPPanel() {
       <div className="relative shrink-0">
         <div className="absolute inset-0 rounded-full glow-gold animate-pulse-glow" />
         {member?.avatarUrl ? (
-          <img src={member.avatarUrl} alt={member.name} className="w-[80px] h-[80px] rounded-full object-cover avatar-ring-gold relative" />
+          <img src={member.avatarUrl} alt={member.name} className="w-[100px] h-[100px] rounded-full object-cover avatar-ring-gold relative" />
         ) : (
           <div
-            className="w-[80px] h-[80px] rounded-full flex items-center justify-center font-mono text-[24px] font-medium text-bg avatar-ring-gold relative"
+            className="w-[100px] h-[100px] rounded-full flex items-center justify-center font-mono text-[28px] font-medium text-bg avatar-ring-gold relative"
             style={{ backgroundColor: member?.color || '#444' }}
           >
             {(member?.name || topLogin).slice(0, 2).toUpperCase()}
@@ -32,13 +32,13 @@ export function MVPPanel() {
       </div>
 
       <div className="flex flex-col gap-1">
-        <span className="font-mono text-[10px] uppercase tracking-[3px] font-medium neon-text-gold">
+        <span className="font-mono text-[13px] uppercase tracking-[3px] font-medium neon-text-gold">
           🏆 mvp this month
         </span>
-        <span className="text-[24px] font-medium shimmer-text">
+        <span className="text-[40px] font-medium shimmer-text">
           {member?.name || topLogin}
         </span>
-        <span className="font-mono text-[12px] text-t3">
+        <span className="font-mono text-[14px] text-t3">
           Level {level.level} · {level.title}
         </span>
       </div>
@@ -57,11 +57,11 @@ export function MVPPanel() {
 function StatBlock({ icon, label, value, suffix, glow }: { icon: string; label: string; value: number; suffix?: string; glow?: boolean }) {
   return (
     <div className="flex flex-col items-center">
-      <span className="text-[14px] mb-1">{icon}</span>
-      <span className={`font-mono text-[20px] font-medium ${glow ? 'neon-text-cyan' : 'text-t1'}`}>
+      <span className="text-[16px] mb-1">{icon}</span>
+      <span className={`font-mono text-[28px] font-medium ${glow ? 'neon-text-cyan' : 'text-t1'}`}>
         {value}{suffix || ''}
       </span>
-      <span className="font-mono text-[10px] text-t3">{label}</span>
+      <span className="font-mono text-[13px] text-t3">{label}</span>
     </div>
   );
 }

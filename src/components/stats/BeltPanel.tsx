@@ -12,8 +12,8 @@ export function BeltPanel() {
   return (
     <div className="px-4 py-3 border-t border-border">
       <div className="flex items-center gap-1.5 mb-2">
-        <span className="text-[12px]">🥋</span>
-        <span className="font-mono text-[10px] text-t3 uppercase tracking-wider">
+        <span className="text-[14px]">🥋</span>
+        <span className="font-mono text-[13px] text-t3 uppercase tracking-wider">
           belt holders
         </span>
       </div>
@@ -29,19 +29,19 @@ export function BeltPanel() {
 function BeltRow({ emoji, label, member }: { emoji: string; label: string; member: { login: string; name: string; avatarUrl: string; color: string } | null }) {
   return (
     <div className="flex items-center gap-2">
-      <span className="text-[12px]">{emoji}</span>
-      <span className="font-mono text-[10px] text-t3 w-[65px]">{label}</span>
+      <span className="text-[14px]">{emoji}</span>
+      <span className="font-mono text-[13px] text-t3 w-[75px]">{label}</span>
       {member ? (
         <div className="flex items-center gap-1.5">
           {member.avatarUrl ? (
-            <img src={member.avatarUrl} alt={member.name} className="w-[16px] h-[16px] rounded-full" />
+            <img src={member.avatarUrl} alt={member.name} className="w-[20px] h-[20px] rounded-full" />
           ) : (
-            <div className="w-[16px] h-[16px] rounded-full" style={{ backgroundColor: member.color }} />
+            <div className="w-[20px] h-[20px] rounded-full" style={{ backgroundColor: member.color }} />
           )}
-          <span className="font-mono text-[11px] text-t1 truncate">{member.name}</span>
+          <span className="font-mono text-[13px] text-t1 truncate">{member.name}</span>
         </div>
       ) : (
-        <span className="font-mono text-[11px] text-t3">—</span>
+        <span className="font-mono text-[13px] text-t3">—</span>
       )}
     </div>
   );
