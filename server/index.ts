@@ -404,8 +404,8 @@ function processEvent(event: Record<string, unknown>): void {
       if (count > 0) {
         const msg = commits[0]?.message?.split('\n')[0] || 'pushed code';
         addXp(actor, xp.commit * cappedCount, 'commit', repo, `pushed ${count} commit${count > 1 ? 's' : ''}`, msg, eventTime);
-        incrementStat(actor, 'weeklyCommits', count);
-        incrementStat(actor, 'dailyCommits', count);
+        incrementStat(actor, 'weeklyCommits', cappedCount);
+        incrementStat(actor, 'dailyCommits', cappedCount);
         bumpStreak(actor);
         // Fetch line stats via compare API
         const before = payload.before as string;
@@ -546,8 +546,13 @@ function processIssueOrPR(item: Record<string, unknown>, repo: string): void {
 }
 
 let reposFetched = false;
+let polling = false;
+let syncing = false;
 
 async function pollEvents(): Promise<void> {
+  if (polling || syncing) return;
+  polling = true;
+  try {
   reloadConfigIfChanged();
   checkMonthlyReset();
 
@@ -586,36 +591,47 @@ async function pollEvents(): Promise<void> {
     }
   } catch (err) { console.warn('[server] org events error:', err); }
 
-  // Per-repo events + recent activity
+  // Per-repo events + recent activity (parallel batches of 5)
   const reposToCheck = state.repos.slice(0, 20);
-  for (const repo of reposToCheck) {
-    try {
-      const { data, etag, notModified } = await ghFetch(
-        `${BASE}/repos/${encodeURIComponent(GH_ORG)}/${encodeURIComponent(repo)}/events?per_page=100`,
-        state.etags[repo],
-      );
-      state.etags[repo] = etag || '';
-      if (!notModified && Array.isArray(data)) {
-        for (const event of data) {
-          const id = event.id as string;
-          if (seenIds.has(id)) continue;
-          seenIds.add(id);
-          processEvent(event);
-          eventsProcessed++;
-        }
-      }
-    } catch { /* ignore */ }
+  const REPO_BATCH = 5;
+  for (let i = 0; i < reposToCheck.length; i += REPO_BATCH) {
+    const batch = reposToCheck.slice(i, i + REPO_BATCH);
+    const batchBefore = eventsProcessed;
 
-    // Supplementary: recent issues/PRs
-    try {
-      const since = new Date(Date.now() - 2 * 60 * 60 * 1000).toISOString();
-      const { data, ok } = await ghFetch(
-        `${BASE}/repos/${encodeURIComponent(GH_ORG)}/${encodeURIComponent(repo)}/issues?state=all&sort=updated&direction=desc&since=${encodeURIComponent(since)}&per_page=30`,
-      );
-      if (ok && Array.isArray(data)) {
-        for (const item of data) processIssueOrPR(item, repo);
-      }
-    } catch { /* ignore */ }
+    await Promise.allSettled(batch.map(async (repo) => {
+      try {
+        const { data, etag, notModified } = await ghFetch(
+          `${BASE}/repos/${encodeURIComponent(GH_ORG)}/${encodeURIComponent(repo)}/events?per_page=100`,
+          state.etags[repo],
+        );
+        state.etags[repo] = etag || '';
+        if (!notModified && Array.isArray(data)) {
+          for (const event of data) {
+            const id = event.id as string;
+            if (seenIds.has(id)) continue;
+            seenIds.add(id);
+            processEvent(event);
+            eventsProcessed++;
+          }
+        }
+      } catch { /* ignore */ }
+
+      // Supplementary: recent issues/PRs
+      try {
+        const since = new Date(Date.now() - 2 * 60 * 60 * 1000).toISOString();
+        const { data, ok } = await ghFetch(
+          `${BASE}/repos/${encodeURIComponent(GH_ORG)}/${encodeURIComponent(repo)}/issues?state=all&sort=updated&direction=desc&since=${encodeURIComponent(since)}&per_page=30`,
+        );
+        if (ok && Array.isArray(data)) {
+          for (const item of data) processIssueOrPR(item, repo);
+        }
+      } catch { /* ignore */ }
+    }));
+
+    // Broadcast after each batch so clients see updates incrementally
+    if (eventsProcessed > batchBefore) {
+      broadcast('state', getClientState());
+    }
   }
 
   console.log(`[server] Poll: ${eventsProcessed} events, seenIds=${seenIds.size}`);
@@ -623,16 +639,31 @@ async function pollEvents(): Promise<void> {
   // Broadcast state snapshot
   broadcast('state', getClientState());
   persistState();
+  } finally {
+    polling = false;
+  }
 }
 
 async function fullSync(): Promise<void> {
+  if (syncing || polling) return;
+  syncing = true;
+  try {
   reloadConfigIfChanged();
   const xp = xpConfig.xpValues;
   const ws = monthStart();
 
   try {
+    // Parallel search queries
+    const [commitResult, prCreatedResult, prMergedResult, issueClosedResult, issueOpenedResult] = await Promise.allSettled([
+      ghFetch(`${BASE}/search/commits?q=${encodeURIComponent(`org:${GH_ORG} committer-date:>=${ws}`)}&per_page=100`),
+      ghFetch(`${BASE}/search/issues?q=${encodeURIComponent(`org:${GH_ORG} type:pr created:>=${ws}`)}&per_page=100`),
+      ghFetch(`${BASE}/search/issues?q=${encodeURIComponent(`org:${GH_ORG} type:pr is:merged merged:>=${ws}`)}&per_page=100`),
+      ghFetch(`${BASE}/search/issues?q=${encodeURIComponent(`org:${GH_ORG} type:issue is:closed closed:>=${ws}`)}&per_page=100`),
+      ghFetch(`${BASE}/search/issues?q=${encodeURIComponent(`org:${GH_ORG} type:issue created:>=${ws}`)}&per_page=100`),
+    ]);
+
     // Commits
-    const { data: commitData } = await ghFetch(`${BASE}/search/commits?q=${encodeURIComponent(`org:${GH_ORG} committer-date:>=${ws}`)}&per_page=100`);
+    const commitData = commitResult.status === 'fulfilled' ? commitResult.value.data : null;
     const commitItems = (commitData as Record<string, unknown>)?.items as unknown[] || [];
     const commitsByUser: Record<string, { count: number; avatarUrl: string; repos: Set<string>; lastMsg: string; lastTime: string }> = {};
     for (const c of commitItems) {
@@ -652,13 +683,22 @@ async function fullSync(): Promise<void> {
       }
     }
 
-    // PRs
-    const { data: prData } = await ghFetch(`${BASE}/search/issues?q=${encodeURIComponent(`org:${GH_ORG} type:pr created:>=${ws}`)}&per_page=100`);
-    const prItems = (prData as Record<string, unknown>)?.items as unknown[] || [];
+    // PRs — merge created + merged queries, dedup by number
+    const prCreatedData = prCreatedResult.status === 'fulfilled' ? prCreatedResult.value.data : null;
+    const prMergedData = prMergedResult.status === 'fulfilled' ? prMergedResult.value.data : null;
+    const prCreatedItems = (prCreatedData as Record<string, unknown>)?.items as unknown[] || [];
+    const prMergedItems = (prMergedData as Record<string, unknown>)?.items as unknown[] || [];
+    // Merge and deduplicate by PR number
+    const prSeen = new Set<number>();
+    const prAllItems: unknown[] = [];
+    for (const pr of [...prCreatedItems, ...prMergedItems]) {
+      const num = (pr as Record<string, unknown>).number as number;
+      if (!prSeen.has(num)) { prSeen.add(num); prAllItems.push(pr); }
+    }
     const prDataByUser: Record<string, { opens: number; merges: number; avatarUrl: string }> = {};
     const prFeedRaw: Array<{ login: string; title: string; repo: string; time: string; merged: boolean }> = [];
     const prDetailUrls: Array<{ login: string; url: string }> = [];
-    for (const pr of prItems) {
+    for (const pr of prAllItems) {
       const p = pr as Record<string, unknown>;
       const login = (p.user as Record<string, string>)?.login;
       if (!login || isBot(login)) continue;
@@ -697,7 +737,7 @@ async function fullSync(): Promise<void> {
     }
 
     // Issues closed
-    const { data: issueData } = await ghFetch(`${BASE}/search/issues?q=${encodeURIComponent(`org:${GH_ORG} type:issue is:closed closed:>=${ws}`)}&per_page=100`);
+    const issueData = issueClosedResult.status === 'fulfilled' ? issueClosedResult.value.data : null;
     const closedIssues = (issueData as Record<string, unknown>)?.items as unknown[] || [];
     const issuesClosedByUser: Record<string, { count: number; avatarUrl: string }> = {};
     const issueFeedRaw: Array<{ login: string; title: string; repo: string; time: string }> = [];
@@ -714,8 +754,8 @@ async function fullSync(): Promise<void> {
       issueFeedRaw.push({ login, title, repo, time });
     }
 
-    // Issue opens for XP (was missing from fullSync)
-    const { data: issueOpenData } = await ghFetch(`${BASE}/search/issues?q=${encodeURIComponent(`org:${GH_ORG} type:issue created:>=${ws}`)}&per_page=100`);
+    // Issue opens for XP
+    const issueOpenData = issueOpenedResult.status === 'fulfilled' ? issueOpenedResult.value.data : null;
     const openedIssues = (issueOpenData as Record<string, unknown>)?.items as unknown[] || [];
     const issuesOpenedByUser: Record<string, { count: number }> = {};
     for (const issue of openedIssues) {
@@ -760,11 +800,23 @@ async function fullSync(): Promise<void> {
       ensureMember(login, avatarUrl);
       const s = state.stats[login] || emptyStats(login);
 
-      // Use max: search is the floor, poller may have more (reviews, streaks)
-      if (searchXp > s.weeklyXp) {
-        const delta = searchXp - s.weeklyXp;
-        s.weeklyXp = searchXp;
-        s.totalXp += delta; // FIX: additive, not overwrite
+      // Compute how much XP the poller already tracked for searchable categories
+      const pollerSearchableXp =
+        s.weeklyCommits * xp.commit +
+        s.weeklyPRsOpened * xp.prOpened +
+        s.weeklyPRsMerged * xp.prMerged +
+        s.weeklyIssuesClosed * xp.issueClosed;
+      // pollerExtraXp = XP from non-searchable sources (reviews, streaks, branches)
+      const pollerExtraXp = Math.max(0, s.weeklyXp - pollerSearchableXp);
+
+      // Only update if search found more searchable XP than poller tracked
+      if (searchXp > pollerSearchableXp) {
+        const newTotal = searchXp + pollerExtraXp;
+        const delta = newTotal - s.weeklyXp;
+        if (delta > 0) {
+          s.weeklyXp = newTotal;
+          s.totalXp += delta;
+        }
       }
       if (commits > s.weeklyCommits) s.weeklyCommits = commits;
       if (prOpens > s.weeklyPRsOpened) s.weeklyPRsOpened = prOpens;
@@ -860,18 +912,24 @@ async function fullSync(): Promise<void> {
       }
     }
 
-    // Shame PRs
-    const { data: shameData } = await ghFetch(`${BASE}/search/issues?q=${encodeURIComponent(`org:${GH_ORG} type:pr is:open review:none`)}&per_page=100`);
-    const shamePRsRaw = (shameData as Record<string, unknown>)?.items as unknown[] || [];
-    state.shamePRs = shamePRsRaw.map((pr: unknown) => {
-      const p = pr as Record<string, unknown>;
-      return {
-        title: (p.title as string) || '',
-        repo: ((p.repository_url as string) || '').split('/').pop() || '',
-        author: ((p.user as Record<string, string>)?.login) || '',
-        age: Math.round((Date.now() - new Date(p.created_at as string).getTime()) / 3_600_000),
-      };
-    });
+    // Shame PRs + org members in parallel
+    const [shameResult, membersResult] = await Promise.allSettled([
+      ghFetch(`${BASE}/search/issues?q=${encodeURIComponent(`org:${GH_ORG} type:pr is:open review:none`)}&per_page=100`),
+      ghFetch(`${BASE}/orgs/${encodeURIComponent(GH_ORG)}/members?per_page=100`),
+    ]);
+
+    if (shameResult.status === 'fulfilled' && shameResult.value.ok) {
+      const shamePRsRaw = (shameResult.value.data as Record<string, unknown>)?.items as unknown[] || [];
+      state.shamePRs = shamePRsRaw.map((pr: unknown) => {
+        const p = pr as Record<string, unknown>;
+        return {
+          title: (p.title as string) || '',
+          repo: ((p.repository_url as string) || '').split('/').pop() || '',
+          author: ((p.user as Record<string, string>)?.login) || '',
+          age: Math.round((Date.now() - new Date(p.created_at as string).getTime()) / 3_600_000),
+        };
+      });
+    }
 
     // Belts
     const allStats = Object.values(state.stats);
@@ -889,23 +947,23 @@ async function fullSync(): Promise<void> {
       };
     }
 
+    // Apply org members from parallel result
+    if (membersResult.status === 'fulfilled' && membersResult.value.ok && Array.isArray(membersResult.value.data)) {
+      for (const m of membersResult.value.data as Array<Record<string, string>>) {
+        if (!isBot(m.login)) ensureMember(m.login, m.avatar_url || '');
+      }
+    }
+
     console.log(`[server] Full sync done: ${allLogins.size} users`);
   } catch (err) {
     console.warn('[server] Full sync failed:', err);
   }
 
-  // Fetch org members
-  try {
-    const { data, ok } = await ghFetch(`${BASE}/orgs/${encodeURIComponent(GH_ORG)}/members?per_page=100`);
-    if (ok && Array.isArray(data)) {
-      for (const m of data) {
-        if (!isBot(m.login)) ensureMember(m.login, m.avatar_url || '');
-      }
-    }
-  } catch { /* ignore */ }
-
   broadcast('state', getClientState());
   persistState();
+  } finally {
+    syncing = false;
+  }
 }
 
 // ── Client-facing state ──────────────────────────
