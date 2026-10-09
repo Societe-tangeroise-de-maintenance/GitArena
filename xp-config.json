@@ -1,13 +1,25 @@
 {
   "xpValues": {
-    "commit": 50,
-    "prOpened": 80,
-    "prMerged": 120,
+    "commit": 0,
+    "prOpened": 0,
+    "prMerged": 0,
     "prReviewed": 60,
     "issueClosed": 40,
     "issueOpened": 20,
     "firstCommit": 30,
     "streakBonus": 200
+  },
+  "legacyXpValues": { "commit": 50, "prOpened": 80, "prMerged": 120 },
+  "scoring": {
+    "codeMax": 100,
+    "prOpenMax": 10,
+    "prMergeMax": 40,
+    "fullLines": 100,
+    "fullFiles": 3,
+    "fileWeight": 0.25,
+    "excludedDirectories": ["dist", "build", "coverage", "generated", "__generated__", "node_modules", ".next", "target", "out"],
+    "excludedNames": ["package-lock.json", "pnpm-lock.yaml", "yarn.lock", "Cargo.lock", "Gemfile.lock", "poetry.lock", "Pipfile.lock", "bun.lock", "bun.lockb", "composer.lock", "uv.lock"],
+    "excludedSuffixes": [".min.js", ".min.css", ".map", ".generated.ts", ".generated.js"]
   },
   "levels": [
     { "level": 1, "xp": 0,     "title": "intern" },
@@ -20,12 +32,11 @@
     { "level": 8, "xp": 25000, "title": "legendary" }
   ],
   "streakMilestones": [3, 5, 7, 10, 14, 21, 30],
-  "maxCommitsPerPush": 10,
   "bossGoals": [
     { "label": "close 30 issues",  "metric": "issuesClosed", "target": 30 },
     { "label": "merge 20 PRs",     "metric": "prsMerged",    "target": 20 },
     { "label": "hit 200 commits",  "metric": "commits",      "target": 200 }
   ],
-  "pollIntervalSeconds": 10,
-  "fullSyncIntervalSeconds": 300
+  "pollIntervalSeconds": 30,
+  "fullSyncIntervalSeconds": 900
 }

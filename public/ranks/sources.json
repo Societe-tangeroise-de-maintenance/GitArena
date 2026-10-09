@@ -1,0 +1,50 @@
+{
+  "source": "https://valorant-api.com/v1/competitivetiers",
+  "assets": {
+    "iron": {
+      "rank": "IRON 3",
+      "url": "https://media.valorant-api.com/competitivetiers/03621f52-342b-cf4e-4f86-9350a49c6d04/5/largeicon.png",
+      "copyright": "Riot Games"
+    },
+    "bronze": {
+      "rank": "BRONZE 3",
+      "url": "https://media.valorant-api.com/competitivetiers/03621f52-342b-cf4e-4f86-9350a49c6d04/8/largeicon.png",
+      "copyright": "Riot Games"
+    },
+    "silver": {
+      "rank": "SILVER 3",
+      "url": "https://media.valorant-api.com/competitivetiers/03621f52-342b-cf4e-4f86-9350a49c6d04/11/largeicon.png",
+      "copyright": "Riot Games"
+    },
+    "gold": {
+      "rank": "GOLD 3",
+      "url": "https://media.valorant-api.com/competitivetiers/03621f52-342b-cf4e-4f86-9350a49c6d04/14/largeicon.png",
+      "copyright": "Riot Games"
+    },
+    "platinum": {
+      "rank": "PLATINUM 3",
+      "url": "https://media.valorant-api.com/competitivetiers/03621f52-342b-cf4e-4f86-9350a49c6d04/17/largeicon.png",
+      "copyright": "Riot Games"
+    },
+    "diamond": {
+      "rank": "DIAMOND 3",
+      "url": "https://media.valorant-api.com/competitivetiers/03621f52-342b-cf4e-4f86-9350a49c6d04/20/largeicon.png",
+      "copyright": "Riot Games"
+    },
+    "ascendant": {
+      "rank": "ASCENDANT 3",
+      "url": "https://media.valorant-api.com/competitivetiers/03621f52-342b-cf4e-4f86-9350a49c6d04/23/largeicon.png",
+      "copyright": "Riot Games"
+    },
+    "immortal": {
+      "rank": "IMMORTAL 3",
+      "url": "https://media.valorant-api.com/competitivetiers/03621f52-342b-cf4e-4f86-9350a49c6d04/26/largeicon.png",
+      "copyright": "Riot Games"
+    },
+    "radiant": {
+      "rank": "RADIANT",
+      "url": "https://media.valorant-api.com/competitivetiers/03621f52-342b-cf4e-4f86-9350a49c6d04/27/largeicon.png",
+      "copyright": "Riot Games"
+    }
+  }
+}

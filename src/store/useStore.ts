@@ -1,5 +1,5 @@
 import { create } from 'zustand';
-import type { DevStats, FeedItem, Member, Belts, ShamePR } from '../types';
+import type { DevStats, FeedItem, Member, Belts, ShamePR, BossGoal, SeasonRecap, CiAlert } from '../types';
 import { CONFIG } from '../config';
 import { XP_VALUES, getLevel, updateXpConfig } from '../lib/xp';
 import { saveState, loadState } from '../lib/storage';
@@ -10,16 +10,16 @@ import { monthStart, isBot } from '../lib/github';
 function emptyStats(login: string): DevStats {
   return {
     login,
-    weeklyXp: 0,
+    monthlyXp: 0,
     totalXp: 0,
-    weeklyCommits: 0,
-    weeklyPRsOpened: 0,
-    weeklyPRsMerged: 0,
-    weeklyPRsReviewed: 0,
-    weeklyIssuesClosed: 0,
-    weeklyIssuesOpened: 0,
-    weeklyLinesAdded: 0,
-    weeklyLinesDeleted: 0,
+    monthlyCommits: 0,
+    monthlyPRsOpened: 0,
+    monthlyPRsMerged: 0,
+    monthlyPRsReviewed: 0,
+    monthlyIssuesClosed: 0,
+    monthlyIssuesOpened: 0,
+    monthlyLinesAdded: 0,
+    monthlyLinesDeleted: 0,
     dailyCommits: 0,
     dailyIssuesClosed: 0,
     streak: 0,
@@ -43,20 +43,25 @@ interface AppState {
   feed: FeedItem[];
   bossProgress: Record<string, number>;
   bossIndex: number;
+  bossGoals: BossGoal[];
   previousRanks: Record<string, number>;
   belts: Belts;
   shamePRs: ShamePR[];
   spotlightMode: number;
-  weekStartDate: string;
+  monthStartDate: string;
+  dayStartDate: string;
   isDemo: boolean;
   overlayQueue: Array<{ type: string; payload: Record<string, unknown> }>;
+  lastSeason: SeasonRecap | null;
+  ciAlerts: CiAlert[];
+  activeDays: Record<string, number>;
 
   // Actions
   setMembers: (m: Member[]) => void;
   addXp: (login: string, amount: number, type: FeedItem['type'], repo: string, message: string, detail?: string, eventTime?: string) => void;
   bumpStreak: (login: string) => void;
   awardBadge: (login: string, badgeId: string) => void;
-  incrementStat: (login: string, field: keyof Pick<DevStats, 'weeklyCommits' | 'weeklyPRsOpened' | 'weeklyPRsMerged' | 'weeklyPRsReviewed' | 'weeklyIssuesClosed' | 'dailyCommits' | 'dailyIssuesClosed'>, delta?: number) => void;
+  incrementStat: (login: string, field: keyof Pick<DevStats, 'monthlyCommits' | 'monthlyPRsOpened' | 'monthlyPRsMerged' | 'monthlyPRsReviewed' | 'monthlyIssuesClosed' | 'dailyCommits' | 'dailyIssuesClosed'>, delta?: number) => void;
   addLines: (login: string, added: number, deleted: number) => void;
   setBossProgress: (metric: string, value: number) => void;
   setShamePRs: (prs: ShamePR[]) => void;
@@ -67,13 +72,13 @@ interface AppState {
   applySyncData: (data: Array<{ login: string; avatarUrl: string; xp: number; commits: number; prOpens: number; prMerges: number; issueCloses: number }>, feedItems: FeedItem[]) => void;
   pushOverlay: (overlay: { type: string; payload: Record<string, unknown> }) => void;
   popOverlay: () => void;
-  checkWeeklyReset: () => void;
+  checkMonthlyReset: () => void;
   persist: () => void;
   hydrate: () => void;
   loadServerState: (data: Record<string, unknown>) => void;
   applyServerFeed: (feedItem: FeedItem) => void;
   applyServerOverlay: (overlay: { type: string; payload: Record<string, unknown> }) => void;
-  applyServerConfig: (config: { xpValues: Record<string, number>; levels: Array<{ level: number; xp: number; title: string }> }) => void;
+  applyServerConfig: (config: { xpValues: Record<string, number>; levels: Array<{ level: number; xp: number; title: string }>; bossGoals?: BossGoal[] }) => void;
 }
 
 export const useStore = create<AppState>((set, get) => ({
@@ -82,13 +87,18 @@ export const useStore = create<AppState>((set, get) => ({
   feed: [],
   bossProgress: {},
   bossIndex: 0,
+  bossGoals: CONFIG.bossGoals.map(goal => ({ ...goal })),
   previousRanks: {},
   belts: { reviewer: null, closer: null, speedKing: null },
   shamePRs: [],
   spotlightMode: 0,
-  weekStartDate: monthStart(),
+  monthStartDate: monthStart(),
+  dayStartDate: today(),
   isDemo: typeof CONFIG.pat === 'string' && CONFIG.pat.trim().length > 0,
   overlayQueue: [],
+  lastSeason: null,
+  ciAlerts: [],
+  activeDays: {},
 
   setMembers: (members) => {
     const existing = get().members;
@@ -138,9 +148,9 @@ export const useStore = create<AppState>((set, get) => ({
     const stats = { ...get().stats };
     const s = { ...(stats[login] || emptyStats(login)) };
     const oldLevel = getLevel(s.totalXp).level;
-    s.weeklyXp += amount;
+    s.monthlyXp += amount;
     s.totalXp += amount;
-    console.log(`[GitArena] +${amount}xp ${login} (${type}) → ${s.weeklyXp}xp total`);
+    console.log(`[GitArena] +${amount}xp ${login} (${type}) → ${s.monthlyXp}xp total`);
     s.lastActivityTime = eventTime || new Date().toISOString();
     stats[login] = s;
 
@@ -204,7 +214,7 @@ export const useStore = create<AppState>((set, get) => ({
 
     // Streak bonus at 3, 5, 7, 10, 14, 21, 30
     if ([3, 5, 7, 10, 14, 21, 30].includes(s.streak)) {
-      s.weeklyXp += XP_VALUES.streakBonus;
+      s.monthlyXp += XP_VALUES.streakBonus;
       s.totalXp += XP_VALUES.streakBonus;
     }
 
@@ -237,7 +247,7 @@ export const useStore = create<AppState>((set, get) => ({
     set({ stats });
 
     // Auto-detect count-based badges
-    if (field === 'weeklyIssuesClosed' && s.weeklyIssuesClosed >= 10 && !s.badges.includes('ghostSlayer')) {
+    if (field === 'monthlyIssuesClosed' && s.monthlyIssuesClosed >= 10 && !s.badges.includes('ghostSlayer')) {
       get().awardBadge(login, 'ghostSlayer');
     }
     if (field === 'dailyIssuesClosed' && s.dailyIssuesClosed >= 5 && !s.badges.includes('closer')) {
@@ -248,29 +258,22 @@ export const useStore = create<AppState>((set, get) => ({
   addLines: (login, added, deleted) => {
     const stats = { ...get().stats };
     const s = { ...(stats[login] || emptyStats(login)) };
-    s.weeklyLinesAdded += added;
-    s.weeklyLinesDeleted += deleted;
+    s.monthlyLinesAdded += added;
+    s.monthlyLinesDeleted += deleted;
     stats[login] = s;
     set({ stats });
   },
 
   setBossProgress: (metric, value) => {
     const bp = { ...get().bossProgress, [metric]: value };
-    const goal = CONFIG.bossGoals[get().bossIndex];
+    const goals = get().bossGoals;
     const overlayQueue = [...get().overlayQueue];
-
-    if (goal) {
-      const total = CONFIG.bossGoals.reduce((acc, g) => {
-        const v = bp[g.metric] || 0;
-        return acc + (v >= g.target ? 1 : 0);
-      }, 0);
-      if (total === CONFIG.bossGoals.length) {
-        overlayQueue.push({ type: 'boss-victory', payload: { bossIndex: get().bossIndex } });
-        set({ bossProgress: {}, bossIndex: get().bossIndex + 1, overlayQueue });
-        return;
-      }
+    let bossIndex = get().bossIndex;
+    while (goals[bossIndex] && (bp[goals[bossIndex].metric] || 0) >= goals[bossIndex].target) {
+      overlayQueue.push({ type: 'boss-victory', payload: { bossIndex } });
+      bossIndex++;
     }
-    set({ bossProgress: bp, overlayQueue });
+    set({ bossProgress: bp, bossIndex, overlayQueue });
   },
 
   setShamePRs: (prs) => set({ shamePRs: prs }),
@@ -296,14 +299,14 @@ export const useStore = create<AppState>((set, get) => ({
 
       // Use max() so we never regress below search-computed values,
       // but allow poller to push above if it has newer data
-      if (d.xp > s.weeklyXp) {
-        s.weeklyXp = d.xp;
+      if (d.xp > s.monthlyXp) {
+        s.monthlyXp = d.xp;
         s.totalXp = d.xp;
       }
-      if (d.commits > s.weeklyCommits) s.weeklyCommits = d.commits;
-      if (d.prOpens > s.weeklyPRsOpened) s.weeklyPRsOpened = d.prOpens;
-      if (d.prMerges > s.weeklyPRsMerged) s.weeklyPRsMerged = d.prMerges;
-      if (d.issueCloses > s.weeklyIssuesClosed) s.weeklyIssuesClosed = d.issueCloses;
+      if (d.commits > s.monthlyCommits) s.monthlyCommits = d.commits;
+      if (d.prOpens > s.monthlyPRsOpened) s.monthlyPRsOpened = d.prOpens;
+      if (d.prMerges > s.monthlyPRsMerged) s.monthlyPRsMerged = d.prMerges;
+      if (d.issueCloses > s.monthlyIssuesClosed) s.monthlyIssuesClosed = d.issueCloses;
       stats[d.login] = s;
     }
 
@@ -322,26 +325,31 @@ export const useStore = create<AppState>((set, get) => ({
   pushOverlay: (overlay) => set((s) => ({ overlayQueue: [...s.overlayQueue, overlay] })),
   popOverlay: () => set((s) => ({ overlayQueue: s.overlayQueue.slice(1) })),
 
-  checkWeeklyReset: () => {
+  checkMonthlyReset: () => {
     const ms = monthStart();
-    if (ms !== get().weekStartDate) {
+    const day = today();
+    if (day !== get().dayStartDate) {
+      const stats = Object.fromEntries(Object.entries(get().stats).map(([login, value]) => [login, { ...value, dailyCommits: 0, dailyIssuesClosed: 0 }])) as Record<string, DevStats>;
+      set({ stats, dayStartDate: day });
+    }
+    if (ms !== get().monthStartDate) {
       const stats = { ...get().stats };
       for (const login of Object.keys(stats)) {
         const s = { ...stats[login] };
-        s.weeklyXp = 0;
-        s.weeklyCommits = 0;
-        s.weeklyPRsOpened = 0;
-        s.weeklyPRsMerged = 0;
-        s.weeklyPRsReviewed = 0;
-        s.weeklyIssuesClosed = 0;
-        s.weeklyIssuesOpened = 0;
-        s.weeklyLinesAdded = 0;
-        s.weeklyLinesDeleted = 0;
+        s.monthlyXp = 0;
+        s.monthlyCommits = 0;
+        s.monthlyPRsOpened = 0;
+        s.monthlyPRsMerged = 0;
+        s.monthlyPRsReviewed = 0;
+        s.monthlyIssuesClosed = 0;
+        s.monthlyIssuesOpened = 0;
+        s.monthlyLinesAdded = 0;
+        s.monthlyLinesDeleted = 0;
         s.dailyCommits = 0;
         s.dailyIssuesClosed = 0;
         stats[login] = s;
       }
-      set({ stats, weekStartDate: ms, bossProgress: {}, previousRanks: {} });
+      set({ stats, monthStartDate: ms, dayStartDate: day, bossProgress: {}, bossIndex: 0, previousRanks: {} });
     }
   },
 
@@ -353,7 +361,7 @@ export const useStore = create<AppState>((set, get) => ({
       bossIndex: s.bossIndex,
       previousRanks: s.previousRanks,
       belts: s.belts,
-      weekStart: s.weekStartDate,
+      monthStart: s.monthStartDate,
       feed: s.feed,
     });
   },
@@ -367,7 +375,7 @@ export const useStore = create<AppState>((set, get) => ({
       bossIndex: saved.bossIndex,
       previousRanks: saved.previousRanks,
       belts: saved.belts,
-      weekStartDate: saved.weekStart,
+      monthStartDate: saved.monthStart,
       feed: (saved.feed || []) as FeedItem[],
     });
   },
@@ -383,8 +391,11 @@ export const useStore = create<AppState>((set, get) => ({
       previousRanks?: Record<string, number>;
       belts?: Belts;
       shamePRs?: ShamePR[];
-      weekStartDate?: string;
-      xpConfig?: { xpValues: Record<string, number>; levels: Array<{ level: number; xp: number; title: string }> };
+      monthStartDate?: string;
+      lastSeason?: SeasonRecap | null;
+      ciAlerts?: CiAlert[];
+      activeDays?: Record<string, number>;
+      xpConfig?: { xpValues: Record<string, number>; levels: Array<{ level: number; xp: number; title: string }>; bossGoals?: BossGoal[] };
     };
     const update: Partial<AppState> = {};
     if (d.members) update.members = d.members;
@@ -395,8 +406,14 @@ export const useStore = create<AppState>((set, get) => ({
     if (d.previousRanks) update.previousRanks = d.previousRanks;
     if (d.belts) update.belts = d.belts;
     if (d.shamePRs) update.shamePRs = d.shamePRs;
-    if (d.weekStartDate) update.weekStartDate = d.weekStartDate;
-    if (d.xpConfig) updateXpConfig(d.xpConfig);
+    if (d.monthStartDate) update.monthStartDate = d.monthStartDate;
+    if (d.lastSeason !== undefined) update.lastSeason = d.lastSeason;
+    if (d.ciAlerts) update.ciAlerts = d.ciAlerts;
+    if (d.activeDays) update.activeDays = d.activeDays;
+    if (d.xpConfig) {
+      updateXpConfig(d.xpConfig);
+      if (d.xpConfig.bossGoals) update.bossGoals = d.xpConfig.bossGoals;
+    }
     set(update);
   },
 
@@ -417,8 +434,9 @@ export const useStore = create<AppState>((set, get) => ({
     }
   },
 
-  applyServerConfig: (config: { xpValues: Record<string, number>; levels: Array<{ level: number; xp: number; title: string }> }) => {
+  applyServerConfig: (config: { xpValues: Record<string, number>; levels: Array<{ level: number; xp: number; title: string }>; bossGoals?: BossGoal[] }) => {
     updateXpConfig(config);
+    if (config.bossGoals) set({ bossGoals: config.bossGoals });
   },
 }));
 
@@ -429,7 +447,7 @@ if (typeof window !== 'undefined') {
     getStats: () => useStore.getState().stats,
     getRanking: () => rankedLogins(useStore.getState().stats).map((login, i) => {
       const s = useStore.getState().stats[login];
-      return `#${i + 1} ${login}: ${s?.weeklyXp || 0} XP`;
+      return `#${i + 1} ${login}: ${s?.monthlyXp || 0} XP`;
     }),
     getFeed: () => useStore.getState().feed.slice(0, 10),
     forceReset: () => {
@@ -444,6 +462,6 @@ if (typeof window !== 'undefined') {
 // Helper selector
 export function rankedLogins(stats: Record<string, DevStats>): string[] {
   return Object.values(stats)
-    .sort((a, b) => b.weeklyXp - a.weeklyXp)
+    .sort((a, b) => b.monthlyXp - a.monthlyXp)
     .map((s) => s.login);
 }

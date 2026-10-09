@@ -7,16 +7,16 @@ export interface Member {
 
 export interface DevStats {
   login: string;
-  weeklyXp: number;
+  monthlyXp: number;
   totalXp: number;
-  weeklyCommits: number;
-  weeklyPRsOpened: number;
-  weeklyPRsMerged: number;
-  weeklyPRsReviewed: number;
-  weeklyIssuesClosed: number;
-  weeklyIssuesOpened: number;
-  weeklyLinesAdded: number;
-  weeklyLinesDeleted: number;
+  monthlyCommits: number;
+  monthlyPRsOpened: number;
+  monthlyPRsMerged: number;
+  monthlyPRsReviewed: number;
+  monthlyIssuesClosed: number;
+  monthlyIssuesOpened: number;
+  monthlyLinesAdded: number;
+  monthlyLinesDeleted: number;
   dailyCommits: number;
   dailyIssuesClosed: number;
   streak: number;
@@ -29,7 +29,7 @@ export interface DevStats {
 
 export interface FeedItem {
   id: string;
-  type: 'commit' | 'pr-opened' | 'pr-merged' | 'review' | 'issue' | 'issue-opened' | 'badge' | 'streak' | 'level-up';
+  type: 'commit' | 'branch-push' | 'pr-opened' | 'pr-merged' | 'review' | 'issue' | 'issue-opened' | 'badge' | 'streak' | 'level-up';
   user: string;
   repo: string;
   message: string;
@@ -63,4 +63,20 @@ export interface ShamePR {
   repo: string;
   author: string;
   age: number;
+}
+
+export interface SeasonRecap {
+  month: string;
+  teamXp: number;
+  standings: Array<{ login: string; xp: number; commits: number; merges: number; reviews: number; streak: number }>;
+}
+
+export interface CiAlert {
+  repo: string;
+  branch: string;
+  failing: boolean;
+  workflow: string;
+  url: string;
+  since: string;
+  actor?: string;
 }

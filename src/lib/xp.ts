@@ -1,7 +1,7 @@
 export let XP_VALUES = {
-  commit: 50,
-  prOpened: 80,
-  prMerged: 120,
+  commit: 100,
+  prOpened: 10,
+  prMerged: 40,
   prReviewed: 60,
   issueClosed: 40,
   issueOpened: 20,

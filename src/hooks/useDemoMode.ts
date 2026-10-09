@@ -1,7 +1,7 @@
 import { useEffect, useRef } from 'react';
 import { useStore } from '../store/useStore';
 import { XP_VALUES } from '../lib/xp';
-import type { Member } from '../types';
+import type { FeedItem, Member } from '../types';
 
 function buildDemoAvatar(name: string, color: string): string {
   const initials = name
@@ -88,33 +88,37 @@ export function useDemoMode() {
     if (!isDemo || seeded.current) return;
     seeded.current = true;
 
-    setMembers(DEMO_MEMBERS);
-
     // Pre-seed stats
     setTimeout(() => {
+      setMembers(DEMO_MEMBERS);
       const store = useStore.getState();
 
       // Seed each member with initial data
-      const seedData: Record<string, { commits: number; prs: number; reviews: number; issues: number; xp: number; streak: number }> = {
-        alice:   { commits: 42, prs: 8, reviews: 12, issues: 6, xp: 3800, streak: 5 },
-        yassine: { commits: 35, prs: 6, reviews: 15, issues: 4, xp: 3200, streak: 3 },
-        mehdi:   { commits: 28, prs: 5, reviews: 8,  issues: 7, xp: 2600, streak: 7 },
-        sara:    { commits: 22, prs: 4, reviews: 10, issues: 3, xp: 2100, streak: 2 },
-        karim:   { commits: 3,  prs: 1, reviews: 2,  issues: 0, xp: 400,  streak: 0 },
-        nadia:   { commits: 18, prs: 3, reviews: 6,  issues: 5, xp: 1800, streak: 4 },
+      const seedData: Record<string, { commits: number; prs: number; reviews: number; issues: number; streak: number }> = {
+        alice:   { commits: 42, prs: 8, reviews: 12, issues: 6, streak: 5 },
+        yassine: { commits: 35, prs: 6, reviews: 15, issues: 4, streak: 3 },
+        mehdi:   { commits: 28, prs: 5, reviews: 8,  issues: 7, streak: 7 },
+        sara:    { commits: 22, prs: 4, reviews: 10, issues: 3, streak: 2 },
+        karim:   { commits: 3,  prs: 1, reviews: 2,  issues: 0, streak: 0 },
+        nadia:   { commits: 18, prs: 3, reviews: 6,  issues: 5, streak: 4 },
       };
 
       for (const [login, data] of Object.entries(seedData)) {
         const s = { ...store.stats[login] };
-        s.weeklyXp = data.xp;
-        s.totalXp = data.xp + randInt(500, 3000);
-        s.weeklyCommits = data.commits;
-        s.weeklyPRsMerged = data.prs;
-        s.weeklyPRsReviewed = data.reviews;
-        s.weeklyIssuesClosed = data.issues;
-        s.weeklyPRsOpened = data.prs + randInt(0, 3);
-        s.weeklyLinesAdded = data.commits * randInt(20, 80);
-        s.weeklyLinesDeleted = data.commits * randInt(5, 30);
+        s.monthlyCommits = data.commits;
+        s.monthlyPRsMerged = data.prs;
+        s.monthlyPRsReviewed = data.reviews;
+        s.monthlyIssuesClosed = data.issues;
+        s.monthlyPRsOpened = data.prs + 2;
+        s.monthlyXp =
+          s.monthlyCommits * XP_VALUES.commit +
+          s.monthlyPRsOpened * XP_VALUES.prOpened +
+          s.monthlyPRsMerged * XP_VALUES.prMerged +
+          s.monthlyPRsReviewed * XP_VALUES.prReviewed +
+          s.monthlyIssuesClosed * XP_VALUES.issueClosed;
+        s.totalXp = s.monthlyXp + 1200;
+        s.monthlyLinesAdded = data.commits * randInt(20, 80);
+        s.monthlyLinesDeleted = data.commits * randInt(5, 30);
         s.dailyCommits = randInt(1, 8);
         s.dailyIssuesClosed = randInt(0, 3);
         s.streak = data.streak;
@@ -137,9 +141,13 @@ export function useDemoMode() {
       useStore.setState({ stats: { ...store.stats } });
 
       // Boss ~45%
-      setBossProgress('issuesClosed', 14);
-      setBossProgress('prsMerged', 9);
-      setBossProgress('commits', 90);
+      if (new URLSearchParams(window.location.search).get('panel') === 'voyage') {
+        useStore.setState({ bossProgress: Object.fromEntries(store.bossGoals.map(g => [g.metric, g.target * .18])) });
+      } else {
+        setBossProgress('issuesClosed', 14);
+        setBossProgress('prsMerged', 9);
+        setBossProgress('commits', 90);
+      }
 
       // Shame PRs
       setShamePRs([
@@ -159,6 +167,7 @@ export function useDemoMode() {
       const types: Array<'commit' | 'pr-merged' | 'pr-opened' | 'review' | 'issue'> = [
         'commit', 'commit', 'commit', 'pr-merged', 'pr-opened', 'review', 'issue',
       ];
+      const seedFeed: FeedItem[] = [];
       for (let i = 0; i < 15; i++) {
         const member = pick(DEMO_MEMBERS.filter(m => m.login !== 'karim'));
         const type = pick(types);
@@ -170,14 +179,50 @@ export function useDemoMode() {
             : type === 'issue'
               ? pick(ISSUE_TITLES)
               : 'reviewed PR';
-        addXp(member.login, 0, type, repo, msg); // xp 0 since pre-seeded
+        const action = type === 'commit' ? 'shipped a commit' : type === 'pr-merged' ? 'merged PR' : type === 'pr-opened' ? 'opened PR' : type === 'issue' ? 'closed issue' : 'reviewed PR';
+        const xp = type === 'commit' ? XP_VALUES.commit : type === 'pr-merged' ? XP_VALUES.prMerged : type === 'pr-opened' ? XP_VALUES.prOpened : type === 'issue' ? XP_VALUES.issueClosed : XP_VALUES.prReviewed;
+        seedFeed.push({ id: `demo-seed-${i}`, type, user: member.login, repo, message: action, detail: msg, xp, time: new Date(Date.now() - i * 4 * 60_000).toISOString() });
       }
+      useStore.setState({ feed: seedFeed });
     }, 100);
   }, [isDemo, setMembers, addXp, setBossProgress, setShamePRs, setBelts, incrementStat, bumpStreak, awardBadge]);
 
+  // An explicit voyage preview runs a repeatable fake mission locally.
+  useEffect(() => {
+    if (!isDemo || new URLSearchParams(window.location.search).get('panel') !== 'voyage') return;
+    const stages = [
+      { percent: 18, type: 'commit' as const, damage: false },
+      { percent: 25, type: 'pr-merged' as const, damage: false },
+      { percent: 28, type: 'review' as const, damage: false },
+      { percent: 32, type: 'commit' as const, damage: true },
+      { percent: 36, type: 'pr-merged' as const, damage: false },
+      { percent: 50, type: 'commit' as const, damage: false },
+      { percent: 56, type: 'review' as const, damage: false },
+      { percent: 61, type: 'pr-merged' as const, damage: false },
+      { percent: 75, type: 'commit' as const, damage: true },
+      { percent: 81, type: 'review' as const, damage: false },
+      { percent: 86, type: 'pr-merged' as const, damage: false },
+      { percent: 100, type: 'commit' as const, damage: false },
+    ];
+    let index = 0;
+    const step = () => {
+      const stage = stages[index++ % stages.length];
+      const state = useStore.getState();
+      const event: FeedItem = { id: `voyage-demo-${Date.now()}`, type: stage.type, user: 'alice', repo: 'api-server', message: stage.type === 'review' ? 'reviewed PR' : stage.type === 'pr-merged' ? 'merged PR' : 'pushed a commit', detail: 'Voyage simulation', xp: 0, time: new Date().toISOString() };
+      useStore.setState({
+        bossProgress: Object.fromEntries(state.bossGoals.map(g => [g.metric, g.target * stage.percent / 100])),
+        ciAlerts: stage.damage ? [{ repo: 'api-server', branch: 'staging', failing: true, workflow: 'Build', url: '', since: event.time }] : [],
+        feed: [event, ...state.feed].slice(0, 50),
+      });
+    };
+    const start = setTimeout(step, 500);
+    const timer = setInterval(step, 8000);
+    return () => { clearTimeout(start); clearInterval(timer); };
+  }, [isDemo]);
+
   // Demo tick — simulate live events every 7-12s
   useEffect(() => {
-    if (!isDemo) return;
+    if (!isDemo || new URLSearchParams(window.location.search).get('panel') === 'voyage') return;
 
     function demoTick() {
       const member = pick(DEMO_MEMBERS.filter(m => m.login !== 'karim'));
@@ -188,28 +233,28 @@ export function useDemoMode() {
         // Commit
         const msg = pick(COMMIT_MESSAGES);
         addXp(member.login, XP_VALUES.commit, 'commit', repo, 'pushed 1 commit', msg);
-        incrementStat(member.login, 'weeklyCommits');
+        incrementStat(member.login, 'monthlyCommits');
         incrementStat(member.login, 'dailyCommits');
         bumpStreak(member.login);
       } else if (roll < 0.60) {
         // PR opened
         const title = pick(PR_TITLES);
         addXp(member.login, XP_VALUES.prOpened, 'pr-opened', repo, 'opened PR', title);
-        incrementStat(member.login, 'weeklyPRsOpened');
+        incrementStat(member.login, 'monthlyPRsOpened');
       } else if (roll < 0.75) {
         // PR merged
         const title = pick(PR_TITLES);
         addXp(member.login, XP_VALUES.prMerged, 'pr-merged', repo, 'merged PR', title);
-        incrementStat(member.login, 'weeklyPRsMerged');
+        incrementStat(member.login, 'monthlyPRsMerged');
       } else if (roll < 0.88) {
         // Review
         addXp(member.login, XP_VALUES.prReviewed, 'review', repo, 'reviewed PR');
-        incrementStat(member.login, 'weeklyPRsReviewed');
+        incrementStat(member.login, 'monthlyPRsReviewed');
       } else {
         // Issue closed
         const title = pick(ISSUE_TITLES);
         addXp(member.login, XP_VALUES.issueClosed, 'issue', repo, 'closed issue', title);
-        incrementStat(member.login, 'weeklyIssuesClosed');
+        incrementStat(member.login, 'monthlyIssuesClosed');
         incrementStat(member.login, 'dailyIssuesClosed');
       }
 

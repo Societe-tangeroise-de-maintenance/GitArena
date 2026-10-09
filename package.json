@@ -33,6 +33,7 @@
   },
   "dependencies": {
     "@fontsource-variable/geist-mono": "*",
+    "@fontsource/barlow-condensed": "^5.3.0",
     "@fontsource/geist": "*",
     "cors": "^2.8.6",
     "express": "^5.2.1",

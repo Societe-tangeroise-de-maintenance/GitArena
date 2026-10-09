@@ -2,6 +2,7 @@ node_modules/
 dist/
 src/config.ts
 server-state.json
+data/
 .github/SKILL.md
 *.local
 *.bak

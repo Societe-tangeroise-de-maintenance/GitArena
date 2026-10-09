@@ -21,7 +21,6 @@ export const CONFIG = {
   repos:            [] as string[],
   pollInterval:     10,
   fullSyncInterval: 300,
-  weeklyResetDay:   1,
   bossGoals: [
     { label: 'close 30 issues',  metric: 'issuesClosed' as const, target: 30  },
     { label: 'merge 20 PRs',     metric: 'prsMerged'    as const, target: 20  },
