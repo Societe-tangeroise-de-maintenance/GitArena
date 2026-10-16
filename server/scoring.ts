@@ -73,3 +73,15 @@ export function allocateXp(total: number, weights: Record<string, number>): Reco
   }
   return Object.fromEntries(shares.map(share => [share.login, share.amount]));
 }
+
+// Validate every legacy rate before calculating or persisting migrated scores.
+export function legacyXpRates(values: Record<string, number>, legacy?: Partial<Record<'commit' | 'prOpened' | 'prMerged', number>>) {
+  function rate(key: 'commit' | 'prOpened' | 'prMerged'): number {
+    const value = legacy?.[key] ?? values[key];
+    if (typeof value !== 'number' || !Number.isFinite(value) || value < 0) {
+      throw new Error(`Cannot safely migrate: invalid legacy XP rate for ${key}`);
+    }
+    return value;
+  }
+  return { commit: rate('commit'), prOpened: rate('prOpened'), prMerged: rate('prMerged') };
+}
