@@ -4,7 +4,7 @@ import fs from 'fs';
 import path from 'path';
 import { createHash } from 'crypto';
 import { fileURLToPath } from 'url';
-import { DEFAULT_SCORING, allocateXp, scoreDiff, type ChangedFile, type ScoringConfig } from './scoring.js';
+import { DEFAULT_SCORING, allocateXp, legacyXpRates, scoreDiff, type ChangedFile, type ScoringConfig } from './scoring.js';
 
 // ── Paths ────────────────────────────────────────
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
@@ -1911,7 +1911,7 @@ app.post('/api/scoring/migrate', requireAdmin, async (_req, res) => {
     for (const entry of Object.values(entries)) for (const item of Object.values(entry.awards)) {
       if (item.month === state.monthStartDate) newXp[item.login] = (newXp[item.login] || 0) + item.amount;
     }
-    const oldXp = { ...xpConfig.xpValues, ...xpConfig.legacyXpValues };
+    const oldXp = legacyXpRates(xpConfig.xpValues, xpConfig.legacyXpValues);
     const rows = [...new Set([...Object.keys(state.stats), ...Object.keys(newXp)])].map(login => {
       const s = state.stats[login] || emptyStats(login);
       const prior = s.monthlyCommits * oldXp.commit + s.monthlyPRsOpened * oldXp.prOpened + s.monthlyPRsMerged * oldXp.prMerged;
