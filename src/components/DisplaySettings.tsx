@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from 'react';
 import { DEFAULT_DISPLAY, goalDisplayKey, useDisplaySettings, type DisplayPreferences } from '../store/useDisplaySettings';
 import { useStore } from '../store/useStore';
 import { ArenaIcon } from './ui/ArenaIcon';
+import { HistoryPicker } from './ScoreHistory';
 import './settings.css';
 
 export function SettingsButton({ arena = false }: { arena?: boolean }) {
@@ -23,6 +24,7 @@ function SettingsDialog() {
   return <dialog ref={dialog} className="display-settings" aria-labelledby="settings-title" onCancel={close} onClick={event => { if (event.target === event.currentTarget) { const r = event.currentTarget.getBoundingClientRect(); if (event.clientX < r.left || event.clientX > r.right || event.clientY < r.top || event.clientY > r.bottom) close(); } }}>
     <form onSubmit={event => { event.preventDefault(); save(draft); }}>
       <header><div><span className="settings-kicker">MAKE IT YOURS</span><h2 id="settings-title">Display settings</h2><p>Your choices are saved on this screen.</p></div><button type="button" className="settings-close" aria-label="Close settings" onClick={close}><ArenaIcon name="close" size={20}/></button></header>
+      <HistoryPicker onOpen={close}/>
       <fieldset className="settings-scene"><legend>Team world <small>Shown in Arena’s bottom panel</small></legend>
         {(['spaceship','city'] as const).map(scene => <label key={scene} className={`settings-world ${draft.scene === scene ? 'selected' : ''}`}><input type="radio" name="scene" value={scene} checked={draft.scene === scene} onChange={() => change('scene', scene)}/><ArenaIcon name={scene === 'city' ? 'city' : 'spark'} size={30}/><strong>{scene === 'city' ? 'Living city' : 'Spaceship'}</strong><span>{scene === 'city' ? 'Projects become a glowing skyline.' : 'The crew travels through boss encounters.'}</span><ArenaIcon name="check" size={16}/></label>)}
       </fieldset>

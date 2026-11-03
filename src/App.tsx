@@ -9,6 +9,7 @@ import { isAudioBlocked, onAudioState, playEventSound, setSoundEnabled, sfxKill,
 import type { DevStats, FeedItem, Member, ShamePR } from './types';
 import { AnimatedScore, Avatar, RankEmblem, RankTierChip, UiSwitch, rankGap, tierForRank, elapsed, eventIcons, initials, number, type UiMode } from './components/shared';
 import { DisplaySettings, SettingsButton } from './components/DisplaySettings';
+import { ScoreHistory, useScoreHistory } from './components/ScoreHistory';
 import { goalDisplayKey, useDisplaySettings } from './store/useDisplaySettings';
 import { CompanionDirector } from './components/companion/useCompanion';
 import { ArenaSelectView } from './components/arena/ArenaSelectView';
@@ -155,6 +156,7 @@ export default function App() {
     try { return localStorage.getItem('gitarena-ui') === 'arena' ? 'arena' : 'broadcast'; } catch { return 'broadcast'; }
   });
   const preferences = useDisplaySettings(s => s.preferences), settingsOpen = useDisplaySettings(s => s.open);
+  const historyOpen = useScoreHistory(s => s.query !== null);
   const reduced = useReducedMotion();
   const { lines: killLines, lastLive } = useArenaMoments();
   const { quiet, until: quietUntil } = useQuiet(now, lastLive);
@@ -195,8 +197,9 @@ export default function App() {
         : <motion.div key="broadcast" className="ui-view arena-shell" initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ duration: reduced ? 0.1 : 0.35, delay: reduced ? 0 : 0.25 }}><Header isDemo={isDemo} memberCount={members.length} now={now} periodStart={periodStart} soundOn={soundOn} onSound={toggleSound} onExpand={expand} uiMode={uiMode} onUiMode={changeUi}/><main className="arena-main"><Standings members={members} stats={stats} hot={hot}/><div className="arena-right"><Mission progress={complete ? 1 : bossProgress[goal.metric] || 0} goal={{...goal, label: preferences.goalLabels[goalDisplayKey(goal)] || goal.label}} teamXp={teamXp} complete={complete}/><Activity feed={feed} members={members} now={now}/></div></main><FeatureStage members={members} stats={stats} feed={feed} shamePRs={shamePRs}/><footer className="arena-footer"><span>GITARENA <b>/</b> BUILD TOGETHER. WIN TOGETHER.</span><span>EVERY COMMIT WRITES THE STORY <ArenaIcon name="arrow" size={15}/></span></footer><AnimatePresence>{overlay && <Celebration key={`${overlay.type}-${JSON.stringify(overlay.payload)}`} overlay={overlay} onDone={popOverlay}/>}</AnimatePresence></motion.div>}
     {!reduced && !preferences.calmMotion && wiping && <motion.div key={wipe} className="ui-wipe" initial={{ x: '-90vw' }} animate={{ x: '120vw' }} transition={{ duration: 0.9, ease: [0.7, 0, 0.3, 1] }} onAnimationComplete={() => setWiping(false)} aria-hidden="true"/>}
     <KillFeed lines={killLines} members={members}/>
-    <Takeovers blocked={!!overlay || quiet || settingsOpen}/>
+    <Takeovers blocked={!!overlay || quiet || settingsOpen || historyOpen}/>
     <DisplaySettings/>
+    <ScoreHistory/>
     <CompanionDirector/>
     <AnimatePresence>{quiet && <QuietScreen now={now} until={quietUntil}/>}</AnimatePresence>
     {soundOn && audioBlocked && <div className="audio-blocked" role="status"><ArenaIcon name="mute" size={20}/><span><strong>SOUND IS BLOCKED BY THE BROWSER</strong>Click or press any key on this screen once to turn it on.</span></div>}
