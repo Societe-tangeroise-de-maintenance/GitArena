@@ -1,0 +1,72 @@
+/* Score history: picker inside Display settings + the results dialog. Reuses .display-settings styling. */
+.settings-history { border-top:1px solid #3c334f!important; padding-top:20px!important; }
+.settings-segment { display:inline-flex; gap:4px; padding:4px; margin-bottom:14px; border:1px solid #403753; border-radius:8px; background:#121220; }
+.settings-segment label { padding:7px 12px; border-radius:5px; font-size:12px; color:#b0a5c9; cursor:pointer; }
+.settings-segment label.selected { color:#fff; background:#39305d; }
+.settings-segment input { position:absolute; opacity:0; pointer-events:none; }
+.settings-segment label:has(input:focus-visible) { outline:2px solid #9a8fff; outline-offset:1px; }
+.settings-history .settings-fields { margin-bottom:12px; }
+.display-settings input[type=date],.display-settings input[type=month] { color-scheme:dark; }
+.settings-history-actions { display:flex; flex-wrap:wrap; align-items:center; gap:10px; }
+.settings-history-actions button { padding:10px 14px; font-weight:600; font-size:12px; }
+.settings-history-actions .settings-save { margin-left:auto; }
+.settings-history-actions .settings-save:disabled { opacity:.45; cursor:not-allowed; }
+.settings-history-error { font-size:12px; color:#ff9d9d; }
+
+.score-history { width:min(1080px,calc(100vw - 32px)); }
+.history-body { padding:28px; }
+.score-history header { display:flex; justify-content:space-between; gap:16px; position:sticky; top:0; z-index:2; margin:-28px -28px 20px; padding:20px 28px; background:#19182c; border-bottom:1px solid #3c334f; }
+.history-nav { display:flex; gap:8px; align-items:flex-start; }
+.history-nav button { display:grid; place-items:center; padding:8px; color:#cdc6e6; background:#2d2843; }
+.history-nav button:first-child svg { transform:rotate(180deg); }
+.history-nav button:disabled { opacity:.35; cursor:not-allowed; }
+.history-status { padding:40px 0; text-align:center; color:#a19ab9; font-size:14px; }
+.history-status--error { color:#ff9d9d; }
+.history-summary { display:grid; grid-template-columns:repeat(auto-fit,minmax(150px,1fr)); gap:12px; margin-bottom:16px; }
+.history-summary div { padding:14px 16px; border:1px solid #403753; border-radius:10px; background:#211e34; }
+.history-summary span { display:block; font:700 10px 'Geist Mono Variable',monospace; letter-spacing:.14em; text-transform:uppercase; color:#9289aa; }
+.history-summary strong { font-size:26px; letter-spacing:-.03em; font-variant-numeric:tabular-nums; }
+.history-notes { margin:0 0 16px; padding:10px 14px 10px 30px; border-radius:8px; background:#3a2c1c; color:#f3d6a6; font-size:12px; line-height:1.5; }
+.history-table-wrap { overflow-x:auto; margin-bottom:22px; border:1px solid #3c334f; border-radius:10px; }
+.history-table { width:100%; border-collapse:collapse; font-size:13px; }
+.history-table th { position:sticky; top:0; padding:10px 12px; text-align:left; font:700 10px 'Geist Mono Variable',monospace; letter-spacing:.1em; text-transform:uppercase; color:#9289aa; background:#211e34; white-space:nowrap; }
+.history-table td { padding:9px 12px; border-top:1px solid #2e2843; vertical-align:middle; }
+.history-table .num { text-align:right; font-variant-numeric:tabular-nums; white-space:nowrap; }
+.history-table .num small { display:block; font-size:10px; color:#8f85a8; }
+.history-table .strong { font-weight:700; color:#fff; font-size:15px; }
+.history-table .rank { color:#9289aa; font-family:'Geist Mono Variable',monospace; }
+.history-table tbody tr:first-child .rank { color:#ffd66b; }
+.history-person { display:flex; align-items:center; gap:10px; min-width:160px; }
+.history-person .arena-avatar { width:32px; height:32px; flex:none; }
+.history-person small { display:block; font-size:11px; color:#8f85a8; }
+.history-section-title { display:flex; justify-content:space-between; align-items:baseline; gap:12px; margin-bottom:10px; }
+.history-section-title strong { font-size:14px; }
+.history-section-title span { font-size:11px; color:#9289aa; }
+.history-chart,.history-bars,.history-events { margin-bottom:22px; padding:16px; border:1px solid #3c334f; border-radius:10px; background:#15142450; }
+.history-chart svg { display:block; width:100%; height:200px; cursor:crosshair; }
+.history-grid { stroke:#ffffff14; stroke-dasharray:3 4; }
+.history-cursor { stroke:#ffffff40; }
+.history-legend { display:flex; flex-wrap:wrap; gap:8px 18px; margin:12px 0 0; padding:0; list-style:none; font-size:12px; color:#cfc6e6; }
+.history-legend li { display:flex; align-items:center; gap:6px; }
+.history-legend i { width:10px; height:10px; border-radius:3px; }
+.history-legend b { color:#fff; font-variant-numeric:tabular-nums; }
+.history-bar-row { display:flex; align-items:flex-end; gap:3px; height:120px; }
+.history-bar-row div { flex:1; display:flex; flex-direction:column; justify-content:flex-end; align-items:center; height:100%; min-width:0; }
+.history-bar-row i { display:block; width:100%; border-radius:3px 3px 0 0; background:linear-gradient(#9a8fff,#6c5cf0); }
+.history-bar-row small { margin-top:4px; font-size:9px; color:#8f85a8; }
+.history-events ol { margin:0; padding:0; list-style:none; max-height:360px; overflow:auto; }
+.history-events li { display:grid; grid-template-columns:48px 18px 1fr auto; align-items:center; gap:10px; padding:8px 0; border-top:1px solid #2e2843; font-size:13px; }
+.history-events li:first-child { border-top:0; }
+.history-events time { font-family:'Geist Mono Variable',monospace; font-size:11px; color:#9289aa; }
+.history-events svg { color:#a99bff; }
+.history-events small { display:block; font-size:11px; color:#8f85a8; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+.history-events span { min-width:0; }
+.history-events b { color:#8ff0b0; font-variant-numeric:tabular-nums; }
+.history-footnote { font-size:11px!important; color:#7f7697!important; }
+@media(max-width:600px) {
+  .history-body { padding:20px; }
+  .score-history header { margin:-20px -20px 20px; padding:16px 20px; }
+  .settings-history-actions .settings-save { margin-left:0; width:100%; justify-content:center; }
+  .settings-segment { display:flex; }
+  .settings-segment label { flex:1; text-align:center; padding:7px 4px; }
+}

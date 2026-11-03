@@ -113,6 +113,9 @@ interface ServerState {
   lastSeason?: SeasonRecap;
   promotionRescoreMonth?: string;
   ciStatus?: Record<string, CiStatus>;
+  /** Review, new-branch and streak XP with its time, for score history. */
+  xpJournal?: Array<{ login: string; kind: string; xp: number; time: string; repo: string; title: string }>;
+  xpJournalStart?: string;
 }
 
 /** Latest CI result per repo branch; a failing one is a "planted spike" on the TV. */
@@ -804,6 +807,17 @@ function ensureMember(login: string, avatarUrl?: string): void {
   if (!state.stats[login]) state.stats[login] = emptyStats(login);
 }
 
+// XP that is not in the score ledger and cannot be re-counted from GitHub search
+// later. Issue XP is left out on purpose: full syncs also credit issues without
+// going through addXp, so score history re-counts issues from GitHub instead.
+const JOURNALED_TYPES: Record<string, string> = { review: 'review' };
+function journalXp(login: string, kind: string, xp: number, time: string, repo: string, title: string): void {
+  if (!state.xpJournalStart) state.xpJournalStart = todayStr();
+  (state.xpJournal ||= []).push({ login, kind, xp, time, repo, title });
+  const cutoff = new Date(Date.now() - 400 * 86400000).toISOString();
+  if (state.xpJournal.length > 20000 || state.xpJournal[0].time < cutoff) state.xpJournal = state.xpJournal.filter(item => item.time >= cutoff).slice(-20000);
+}
+
 function addXp(login: string, amount: number, type: string, repo: string, message: string, detail?: string, eventTime?: string): void {
   if (isBot(login)) return;
   ensureMember(login);
@@ -814,6 +828,8 @@ function addXp(login: string, amount: number, type: string, repo: string, messag
   const activityTime = eventTime || new Date().toISOString();
   if (!s.lastActivityTime || activityTime > s.lastActivityTime) s.lastActivityTime = activityTime;
   state.stats[login] = s;
+  const journalKind = type === 'commit' ? (message.startsWith('created branch') ? 'branch' : '') : JOURNALED_TYPES[type];
+  if (amount && journalKind) journalXp(login, journalKind, amount, activityTime, repo, detail || message);
 
   const feedItem: FeedItem = {
     id: `${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
@@ -887,6 +903,7 @@ function bumpStreak(login: string, eventTime?: string): void {
   if (xpConfig.streakMilestones.includes(s.streak)) {
     s.monthlyXp += xpConfig.xpValues.streakBonus;
     s.totalXp += xpConfig.xpValues.streakBonus;
+    journalXp(login, 'streak', xpConfig.xpValues.streakBonus, eventTime || new Date().toISOString(), '', `${s.streak}-day streak`);
   }
 
   if (s.streak >= 30 && !s.badges.includes('ironDev')) awardBadge(login, 'ironDev');
@@ -2023,6 +2040,113 @@ app.post('/api/repair', requireAdmin, (req, res) => {
   persistState();
   broadcast('state', getClientState());
   res.json({ ok: true, adjustments });
+});
+
+// ── Score history: recompute standings for any past day or date range ──
+// Code / PR XP comes from the itemised score ledger (every award has a time).
+// Issue XP is re-counted from GitHub search. Review, new-branch and streak XP
+// come from the XP journal, which only exists from `xpJournalStart` onwards.
+interface HistoryEvent { login: string; kind: string; xp: number; time: string; repo: string; title: string }
+interface HistoryIssues { complete: boolean; events: HistoryEvent[] }
+const HISTORY_MAX_DAYS = 92;
+const historyIssueCache = new Map<string, { at: number; data: HistoryIssues }>();
+const isDay = (value: unknown): value is string => typeof value === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(value) && !Number.isNaN(Date.parse(`${value}T00:00:00Z`));
+const repoOf = (item: Record<string, unknown>) => String(item.repository_url || '').split('/').pop() || '';
+
+async function historyIssueEvents(from: string, to: string): Promise<HistoryIssues> {
+  if (DEMO_MODE) return { complete: true, events: [] };
+  const key = `${from}|${to}`, cached = historyIssueCache.get(key);
+  // Past ranges never change; ranges touching today are refreshed every 10 minutes.
+  if (cached && (to < todayStr() || Date.now() - cached.at < 10 * 60_000)) return cached.data;
+  const xp = eventXpValues();
+  const [closed, opened] = await Promise.all([
+    searchAll('issues', `org:${GH_ORG} type:issue is:closed`, 'closed', from, to),
+    searchAll('issues', `org:${GH_ORG} type:issue`, 'created', from, to),
+  ]);
+  let complete = closed.complete && opened.complete;
+  const events: HistoryEvent[] = [];
+  for (const issue of opened.items) {
+    const login = (issue.user as Record<string, string> | undefined)?.login, repo = repoOf(issue);
+    if (!login || isBot(login) || (GH_REPOS.length && !GH_REPOS.includes(repo))) continue;
+    events.push({ login, kind: 'issue-opened', xp: xp.issueOpened || 0, time: String(issue.created_at || ''), repo, title: String(issue.title || '') });
+  }
+  for (let i = 0; i < closed.items.length; i += 5) {
+    const batch = closed.items.slice(i, i + 5);
+    const results = await Promise.allSettled(batch.map(issue => issue.closed_by ? Promise.resolve({ ok: true, data: issue }) : ghFetch(String(issue.url))));
+    batch.forEach((issue, j) => {
+      const result = results[j];
+      const detail = result.status === 'fulfilled' && result.value.ok ? result.value.data as Record<string, unknown> | null : null;
+      const login = (detail?.closed_by as Record<string, string> | null | undefined)?.login, repo = repoOf(issue);
+      if (!login) { complete = false; return; }
+      if (isBot(login) || (GH_REPOS.length && !GH_REPOS.includes(repo))) return;
+      events.push({ login, kind: 'issue-closed', xp: xp.issueClosed || 0, time: String(issue.closed_at || ''), repo, title: String(issue.title || '') });
+    });
+  }
+  const data = { complete, events };
+  if (complete) historyIssueCache.set(key, { at: Date.now(), data });
+  return data;
+}
+
+app.get('/api/history', async (req, res) => {
+  const from = req.query.from, to = req.query.to ?? req.query.from;
+  if (!isDay(from) || !isDay(to) || from > to) { res.status(400).json({ error: 'Use from=YYYY-MM-DD and to=YYYY-MM-DD (from must not be after to).' }); return; }
+  const days = Math.round((Date.parse(`${to}T00:00:00Z`) - Date.parse(`${from}T00:00:00Z`)) / 86400000) + 1;
+  if (days > HISTORY_MAX_DAYS) { res.status(400).json({ error: `Choose at most ${HISTORY_MAX_DAYS} days.` }); return; }
+  const today = todayStr();
+  if (from > today) { res.status(400).json({ error: 'That date is in the future.' }); return; }
+  const inRange = (time: string) => { const day = time.slice(0, 10); return day >= from && day <= to; };
+
+  const events: HistoryEvent[] = [];
+  const epoch = state.scoringEpoch || state.monthStartDate;
+  for (const entry of Object.values(state.scoreLedger || {})) for (const item of Object.values(entry.awards)) {
+    if (!item.amount || !item.time || !inRange(item.time) || isBot(item.login)) continue;
+    events.push({ login: item.login, kind: item.kind, xp: item.amount, time: item.time, repo: entry.repo, title: entry.title });
+  }
+  let issues: HistoryIssues = { complete: false, events: [] };
+  try { issues = await historyIssueEvents(from, to > today ? today : to); }
+  catch (err) { console.warn('[server] History issue search failed:', err); }
+  events.push(...issues.events.filter(event => event.time && inRange(event.time)));
+  for (const item of state.xpJournal || []) if (item.xp && inRange(item.time)) events.push({ ...item });
+  events.sort((a, b) => a.time.localeCompare(b.time));
+
+  const blank = (login: string) => ({ login, xp: 0, codeXp: 0, prOpenedXp: 0, prMergedXp: 0, issueXp: 0, bonusXp: 0, codeChanges: 0, prsOpened: 0, prsMerged: 0, issuesOpened: 0, issuesClosed: 0, reviews: 0, activeDays: 0 });
+  const rows: Record<string, ReturnType<typeof blank>> = {};
+  const daily: Record<string, Record<string, number>> = {};
+  const activeDays: Record<string, Set<string>> = {};
+  for (const event of events) {
+    const row = rows[event.login] ||= blank(event.login), day = event.time.slice(0, 10);
+    row.xp += event.xp;
+    if (event.kind === 'code') { row.codeXp += event.xp; row.codeChanges++; }
+    else if (event.kind === 'pr-opened') { row.prOpenedXp += event.xp; row.prsOpened++; }
+    else if (event.kind === 'pr-merged') { row.prMergedXp += event.xp; row.prsMerged++; }
+    else if (event.kind === 'issue-opened') { row.issueXp += event.xp; row.issuesOpened++; }
+    else if (event.kind === 'issue-closed') { row.issueXp += event.xp; row.issuesClosed++; }
+    else { row.bonusXp += event.xp; if (event.kind === 'review') row.reviews++; }
+    (daily[day] ||= {})[event.login] = (daily[day][event.login] || 0) + event.xp;
+    if (event.xp > 0) (activeDays[event.login] ||= new Set()).add(day);
+  }
+  for (const [login, set] of Object.entries(activeDays)) rows[login].activeDays = set.size;
+  const dayList: string[] = [];
+  for (let t = Date.parse(`${from}T00:00:00Z`); t <= Date.parse(`${to}T00:00:00Z`); t += 86400000) dayList.push(new Date(t).toISOString().slice(0, 10));
+
+  // When the range is exactly a finished month, also return the standings the TV showed at the end of it.
+  const monthEnd = new Date(Date.UTC(Number(from.slice(0, 4)), Number(from.slice(5, 7)), 0)).toISOString().slice(0, 10);
+  const wholeMonth = from.endsWith('-01') && to === monthEnd;
+  const official = wholeMonth && state.lastSeason?.month === from ? state.lastSeason : null;
+
+  res.json({
+    from, to,
+    standings: Object.values(rows).sort((a, b) => b.xp - a.xp || a.login.localeCompare(b.login)),
+    days: dayList.map(day => ({ date: day, xp: daily[day] || {} })),
+    events: days === 1 ? events.slice().reverse().slice(0, 300) : [],
+    teamXp: events.reduce((n, event) => n + event.xp, 0),
+    issuesComplete: issues.complete,
+    ledgerStart: epoch,
+    beforeLedger: from < epoch,
+    bonusStart: state.xpJournalStart || null,
+    official,
+    members: state.members,
+  });
 });
 
 // SSE endpoint
